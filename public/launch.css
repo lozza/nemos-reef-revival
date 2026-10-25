@@ -9,9 +9,9 @@
 .launch-intro{font-size:18px;line-height:1.7;margin-bottom:25px}
 .launch-countdown{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .launch-countdown[hidden]{display:none}
-.launch-countdown>div{padding:15px 7px 12px;text-align:center;border:2px solid #61d6f7;border-radius:15px;background:linear-gradient(#0869ad,#033d78)}
+.launch-countdown>div{padding:15px 7px 12px;text-align:center;border:2px solid #ffdd92;border-radius:15px;background:linear-gradient(155deg,#ffc875,#ff9a27 55%,#f57b12);color:#063868}
 .launch-countdown strong{display:block;font-family:var(--display);font-weight:500;font-size:46px;font-variant-numeric:tabular-nums;line-height:1.1}
-.launch-countdown span{font-size:12px;color:#d1f4ff}
+.launch-countdown span{font-size:12px;color:#063868}
 .launch-date{font-size:14px;color:#d8f2ff;margin-bottom:25px;min-height:23px}
 .launch-card .button-large{font-size:22px;min-height:58px}
 .launch-note{font-size:13px;line-height:1.6;color:#d8f2ff;margin:23px 0 0}
