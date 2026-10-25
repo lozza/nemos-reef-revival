@@ -6,7 +6,7 @@ export const LAUNCH_AT = '2026-12-05T10:00:00+00:00';
 const PASSWORD_HASH = 'd8299510d36d173f3f56399d236ae439153bc5aa8fdea6668c1e93bdfa9e7395';
 const SESSION_HASH = '45623998429da125cf0992b3940e160e120106e306908fbbbb5309e3a2db2472';
 const COOKIE = '__Host-reef_preview';
-const allowedAssets = new Set(['/styles.css', '/launch.css', '/launch.js', '/logo.png', '/discord-mascot.png', '/reef-hero-hd.jpg', '/reef-world.jpg', '/fonts/fredoka.woff2', '/fonts/lilita-one.ttf', '/fonts/bubblegum-sans.ttf']);
+const allowedAssets = new Set(['/styles.css', '/launch.css', '/launch.js', '/logo.png', '/discord-mascot.png', '/reef-hero-hd.jpg', '/reef-world.jpg', '/fonts/fredoka.woff2', '/fonts/lilita-one.ttf', '/fonts/bubblegum-sans.ttf', '/fonts/google-sans.woff2']);
 const securityHeaders = {
   'Cache-Control': 'private, no-store',
   'X-Content-Type-Options': 'nosniff',
@@ -29,7 +29,7 @@ function redirect(location, cookie) {
   return response(null, 303, { Location: location, ...(cookie ? { 'Set-Cookie': cookie } : {}) });
 }
 function loginPage(error = false) {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Owner preview — Nemo's Reef Revival</title><link rel="icon" href="/discord-mascot.png"><link rel="stylesheet" href="/styles.css?v=bubblegum20261025"><link rel="stylesheet" href="/launch.css"></head><body class="launch-page"><main class="launch-main wrap"><section class="launch-card owner-card"><h1>Owner preview</h1><p>Sign in to view the main website before launch.</p>${error ? '<p class="owner-error" role="alert">That password was not recognised. Please try again.</p>' : ''}<form class="owner-form" method="post" action="/owner"><label for="password">Preview password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128"><button class="button button-green" type="submit">View website</button></form><a class="owner-back" href="/">Back to the countdown</a></section></main></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Owner preview — Nemo's Reef Revival</title><link rel="icon" href="/discord-mascot.png"><link rel="stylesheet" href="/styles.css?v=mixed-sans20261025"><link rel="stylesheet" href="/launch.css"></head><body class="launch-page"><main class="launch-main wrap"><section class="launch-card owner-card"><h1>Owner preview</h1><p>Sign in to view the main website before launch.</p>${error ? '<p class="owner-error" role="alert">That password was not recognised. Please try again.</p>' : ''}<form class="owner-form" method="post" action="/owner"><label for="password">Preview password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128"><button class="button button-green" type="submit">View website</button></form><a class="owner-back" href="/">Back to the countdown</a></section></main></body></html>`;
 }
 async function asset(request, env, path, preview = false) {
   const url = new URL(request.url);

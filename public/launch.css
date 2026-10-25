@@ -4,12 +4,12 @@
 .launch-main{flex:1;display:flex;align-items:center;padding-block:56px}
 .launch-card{max-width:650px;padding:36px 38px;border:2px solid #79dbf080;border-radius:25px;background:#02375cdb;backdrop-filter:blur(5px)}
 .launch-card .eyebrow{font-size:12px;letter-spacing:1.2px;color:#b9eeff;margin-bottom:20px}
-.launch-card h1{font-size:clamp(40px,5.3vw,68px);letter-spacing:-1px;line-height:1.05;margin-bottom:22px}
+.launch-card h1{font-size:clamp(36px,4.5vw,56px);letter-spacing:-1px;line-height:1.05;margin-bottom:22px}
 .launch-card h1 span{color:#ffdb84}
 .launch-intro{font-size:18px;line-height:1.7;margin-bottom:25px}
 .launch-countdown{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .launch-countdown[hidden]{display:none}
-.launch-countdown>div{padding:15px 7px 12px;text-align:center;border:2px solid #e98231;border-radius:15px;background:#c45100;color:#fff}
+.launch-countdown>div{padding:15px 7px 12px;text-align:center;border:2px solid #873600;border-radius:15px;background:#db650f;color:#fff}
 .launch-countdown strong{display:block;font-family:var(--display);font-weight:500;font-size:46px;font-variant-numeric:tabular-nums;line-height:1.1}
 .launch-countdown span{font-size:12px;color:#fff}
 .launch-date{font-size:14px;color:#d8f2ff;margin-bottom:25px;min-height:23px}
