@@ -33,7 +33,7 @@
       tick();
       if (target > serverNow) interval = setInterval(tick, 1000);
     } catch {
-      dateLabel.textContent = 'Launch updates are available on Discord. Please try again shortly.';
+      dateLabel.textContent = 'Join Discord for launch updates or try again shortly';
     }
   }
   loadLaunch();
