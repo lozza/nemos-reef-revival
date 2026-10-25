@@ -6,7 +6,7 @@ export const LAUNCH_AT = '2026-12-05T10:00:00+00:00';
 const PASSWORD_HASH = 'd8299510d36d173f3f56399d236ae439153bc5aa8fdea6668c1e93bdfa9e7395';
 const SESSION_HASH = '45623998429da125cf0992b3940e160e120106e306908fbbbb5309e3a2db2472';
 const COOKIE = '__Host-reef_preview';
-const allowedAssets = new Set(['/styles.css', '/launch.css', '/launch.js', '/logo.png', '/discord-mascot.png', '/reef-hero-hd.jpg', '/reef-world.jpg', '/fonts/fredoka.woff2', '/fonts/lilita-one.ttf', '/fonts/bubblegum-sans.ttf', '/fonts/google-sans.woff2']);
+const allowedAssets = new Set(['/styles.css', '/launch.css', '/launch.js', '/logo.png', '/logo-clean.svg', '/discord-mascot.png', '/reef-hero-hd.jpg', '/reef-world.jpg', '/fonts/fredoka.woff2', '/fonts/lilita-one.ttf', '/fonts/bubblegum-sans.ttf', '/fonts/google-sans.woff2']);
 const securityHeaders = {
   'Cache-Control': 'private, no-store',
   'X-Content-Type-Options': 'nosniff',
