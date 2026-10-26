@@ -20,6 +20,11 @@ For the changes we've made to the original game, see
 - Mr. Ray's daily homework from about level 9.
 - Seasonal events on their dates, and other events rotating on weekends from level 6.
 
+- Revival balance: reduced growth costs, larger slow-producer harvests,
+  story/level-up pearls, affordable rare-fish feeding, improved mystery seeds
+  and a capped sand-dollar/algae exchange. See [Revival economy](ECONOMY.md)
+  and [balance examples](BALANCE.md). Longer-term pacing still needs player feedback.
+
 ## Still missing or imperfect
 
 Co-op quests are not implemented. The Android Studio emulator can draw some

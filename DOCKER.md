@@ -87,3 +87,6 @@ here too. Keep the server's address handy, without `/healthz`.
 
 For updates, see [Saves and backups](SAVES.md#update-the-server).
 For errors, see [Troubleshooting](TROUBLESHOOTING.md).
+
+For algae exchanges, seed settings and the previous-economy option, see
+[Revival economy](ECONOMY.md).

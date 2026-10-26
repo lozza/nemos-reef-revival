@@ -30,6 +30,34 @@ Key files:
   and [game-action notes](https://github.com/lozza/nemos-reef-revival/blob/re-notes/ACTIONS.md):
   reverse-engineering references.
 
+## Economy profiles
+
+The default `revival` profile enables the algae exchange, seed changes,
+production/growth balance and new pearl rewards.
+Use `--economy classic` or `NEMO_ECONOMY=classic` to select the previous
+catalogue. See [the player and host guide](ECONOMY.md).
+
+- `server/economy.py` defines seed rarity groups, the guarantee, timer migration,
+  exchange prices, persisted UTC-day limits and request receipts.
+- `server/economy_ui.py` generates corrected exchange screens from the host's
+  own APK. No original artwork or compiled UI assets are included in the repo.
+  The server supplies these two generated resources through the game's existing
+  resource-download system. Classic mode supplies the original files for rollback.
+- Exchange costs and rewards are server-defined. A successful exchange saves
+  balances, quota and its receipt together; client-supplied rewards are ignored.
+- The mystery-seed guarantee is account-wide and survives reconnects. Existing
+  seed results and paid growing stages are retained.
+- Production uses fixed native harvests. Nursery costs and pearl-fish feeding
+  are capped; story milestone and future level rewards supply pearls. A one-time
+  migration credits new pearl bonuses for completed eligible story milestones.
+  No sand-dollar/pearl exchange is provided.
+
+The patcher fixes the exchange flow's hardcoded pearl balance check and uses
+the game API route `/nemo/e1/` to advertise this capability. Older routes still
+work for normal play and the server-side economy, but receive no exchange offers.
+The account API route stays unchanged. Server-side validation remains the
+authority for prices, balances and daily limits.
+
 ## Local Docker builds
 
 From the source checkout:
@@ -66,6 +94,23 @@ with `.mp3` or `.ogg` extensions in a `music` folder. Add `--music music`
 to the patch command. The Windows batch patcher picks that folder up
 automatically. Music files are not provided.
 
+## Economy checks
+
+Run the automated checks with `python -m unittest discover -s tests -v`.
+They use synthetic assets; no game files or saved reefs are required.
+
+To reproduce the session model using your own original APK:
+
+```sh
+python tools/economy_report.py --apk nemo.apk --output BALANCE.md
+```
+
+The report compares the Classic and Revival catalogues without reading a save.
+It documents its schedules, costs and pearl-income assumptions. Use copied saves
+for device tests. The production balance uses native fixed harvests, not hidden
+banked rewards; shorter production timers round XP down to avoid raising the
+maximum XP rate.
+
 ## Android game logs
 
 For an APK patched with `--debug-log`, install
@@ -93,8 +138,3 @@ These are destructive developer tools. Stop the server and
 
 Use these only for the Windows data directory they operate on. They are not
 Docker migration or update steps.
-
-## Project website
-
-The homepage is deployed from `main` to Cloudflare Pages. See
-[Website editing and deployment](WEBSITE.md) for the files and build settings.

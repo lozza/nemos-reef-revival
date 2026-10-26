@@ -65,3 +65,6 @@ Use that port when checking and patching. Use this command to start the server
 each time; the double-click launcher always uses 8080.
 
 [Problems?](TROUBLESHOOTING.md) · [Backups and updates](SAVES.md)
+
+For algae exchanges, seed settings and the previous-economy option, see
+[Revival economy](ECONOMY.md).
