@@ -13,5 +13,6 @@ rem 10.0.2.2 is how the Android Studio emulator reaches this PC; it needs a grap
 if "%IP%"=="10.0.2.2" set EXTRA=--emulator
 rem Optional: put music0..music3 (.ogg or .mp3) in a "music" folder next to this file.
 if exist "music\music0.*" set EXTRA=%EXTRA% --music music
-python patcher\patch_apk.py nemo.apk http://%IP%:8080 --debug-log %EXTRA%
+rem Normal play does not need diagnostic logging; see DEVELOPMENT.md for debug options.
+python patcher\patch_apk.py nemo.apk http://%IP%:8080 %EXTRA%
 pause
