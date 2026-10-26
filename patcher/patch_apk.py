@@ -84,6 +84,43 @@ EXCHANGE_DIALOG_PATCHES = (
 DEX_INTERNAL_STORAGE_PATCH = (0x33a9c8, bytes.fromhex('0c03'), bytes.fromhex('0000'))
 
 
+MANIFEST = 'AndroidManifest.xml'
+# Android 14+ refuses to install apps whose targetSdkVersion is below 23 ("App not installed"); the game targets
+# 22. Raising it means the runtime-permission model: WRITE_EXTERNAL_STORAGE and GET_ACCOUNTS are no longer granted
+# at install. The patched game keeps its data in internal storage (DEX_INTERNAL_STORAGE_PATCH) and the Apache
+# HTTP library the bundled SDKs use is still provided to apps targeting below 28.
+MODERN_TARGET_SDK = 23
+
+
+def patch_target_sdk(manifest, target=MODERN_TARGET_SDK):
+    """Sets <uses-sdk android:targetSdkVersion> in the binary manifest (AXML) to at least `target`."""
+    m = bytearray(manifest)
+    u16 = lambda o: struct.unpack_from('<H', m, o)[0]
+    u32 = lambda o: struct.unpack_from('<I', m, o)[0]
+    count, flags, start = u32(16), u32(24), u32(28)
+    def string(i):
+        off = 8 + start + u32(36 + 4 * i)
+        if flags & 0x100:  # UTF-8 pool: char count, byte count, bytes
+            off += 1 if m[off] < 0x80 else 2
+            n = m[off]
+            off += 1 if n < 0x80 else 2
+            return bytes(m[off:off + n]).decode('utf-8', 'replace')
+        return bytes(m[off + 2:off + 2 + 2 * u16(off)]).decode('utf-16le')
+    o = 8 + u32(12)
+    while o < len(m):
+        kind, size = u16(o), u32(o + 4)
+        if kind == 0x0102 and string(u32(o + 20)) == 'uses-sdk':  # start of an element
+            first = o + 16 + u16(o + 24)
+            for a in range(u16(o + 28)):
+                at = first + 20 * a
+                if string(u32(at + 4)) == 'targetSdkVersion' and m[at + 15] == 0x10 and u32(at + 16) < target:
+                    struct.pack_into('<I', m, at + 16, target)
+                    return bytes(m)
+            return manifest
+        o += size
+    return manifest
+
+
 def patch_dex(dex):
     dex = bytearray(dex)
     at, old, new = DEX_INTERNAL_STORAGE_PATCH
@@ -211,7 +248,7 @@ def music_files(music_dir):
     return out
 
 
-def rebuild(apk_in, apk_out, lib, dex, music=None):
+def rebuild(apk_in, apk_out, lib, dex, music=None, manifest=None):
     with zipfile.ZipFile(apk_in) as zin, zipfile.ZipFile(apk_out, 'w') as zout:
         names = set(zin.namelist())
         for name, data in (music or {}).items():
@@ -222,7 +259,7 @@ def rebuild(apk_in, apk_out, lib, dex, music=None):
         for info in zin.infolist():
             if info.filename.startswith('META-INF/') and info.filename.rsplit('.', 1)[-1] in ('SF', 'RSA', 'DSA', 'MF', 'EC'):
                 continue  # old signature
-            data = {LIB: lib, DEX: dex}.get(info.filename) or zin.read(info.filename)
+            data = {LIB: lib, DEX: dex, MANIFEST: manifest}.get(info.filename) or zin.read(info.filename)
             if info.filename.startswith(OLD_ABI):
                 info = copy_info(info, NEW_ABI + info.filename[len(OLD_ABI):])
             zout.writestr(info, data, compress_type=info.compress_type)
@@ -264,6 +301,8 @@ def main():
     ap.add_argument('--music', metavar='DIR',
                     help='folder with music0..music3 (.ogg or .mp3; the game ships without music)')
     ap.add_argument('--signer', help='path to uber-apk-signer.jar')
+    ap.add_argument('--modern-android', action='store_true',
+                    help='target Android 6.0 so Android 14 and newer will install it (see MODERN_TARGET_SDK)')
     args = ap.parse_args()
 
     base = args.server.rstrip('/')
@@ -275,7 +314,9 @@ def main():
     with zipfile.ZipFile(args.apk) as z:
         lib = patch_lib(z.read(LIB), account_url, game_url, args.debug_log, args.emulator)
         dex = patch_dex(z.read(DEX))
-    rebuild(args.apk, out, lib, dex, music_files(args.music))
+    with zipfile.ZipFile(args.apk) as z:
+        manifest = patch_target_sdk(z.read(MANIFEST)) if args.modern_android else None
+    rebuild(args.apk, out, lib, dex, music_files(args.music), manifest)
     print('account API -> %s\ngame API    -> %s' % (account_url, game_url))
     if sign(out, signer):
         print('wrote signed %s' % out)
