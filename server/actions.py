@@ -528,6 +528,10 @@ class Reef:
         self.new_day(w)
         st = w['status']
         reward = {}
+        if st['tapRewardsCount'] >= worlddef.DAILY_TAPS:
+            # A zero-currency success falls through DailyTapItem::showReward
+            # to createPlantView, but we have not awarded a plant prototype.
+            raise ActionRejected(403, 'All three daily rewards have been claimed. Come back tomorrow.')
         if st['tapRewardsCount'] < worlddef.DAILY_TAPS:
             st['tapRewardsCount'] += 1
             level = self.level(w)
@@ -535,8 +539,11 @@ class Reef:
             if st['tapRewardsCount'] == worlddef.DAILY_TAPS:
                 kind = 'hardMoney'
             else:
-                kind = random.choices(['virtualMoney', 'energy', 'xp', 'hardMoney'], [40, 30, 15, 15])[0]
-            amount = {'virtualMoney': 30 + 15 * level, 'energy': 10 + 5 * level, 'xp': 10 + 5 * level,
+                # The native daily item checks five currencies, not XP. An
+                # XP-only reward enters its plant-rendering fallback with an
+                # empty prototype ID and can crash. Fold its weight into algae.
+                kind = random.choices(['virtualMoney', 'energy', 'hardMoney'], [40, 45, 15])[0]
+            amount = {'virtualMoney': 30 + 15 * level, 'energy': 10 + 5 * level,
                       'hardMoney': 2 + level // 10}[kind]
             reward = {kind: amount}
             self.earn(w, reward)

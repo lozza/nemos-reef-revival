@@ -29,7 +29,8 @@ their fourfold harvest.
 ## Earning pearls
 
 - The existing final daily reward tap guarantees **2 + floor(level / 10)** pearls.
-  The first two taps can also award pearls.
+  The first two taps award sand dollars, algae or pearls. XP-only results are
+  excluded because the original daily-reward screen cannot display them safely.
 - Ordinary level-ups give at least **one pearl**, with **three at every fifth
   level**. Larger pre-existing rewards are retained.
 - Main story and Tank Gang milestones from level 6 give **two pearls**, rising

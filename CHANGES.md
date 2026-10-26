@@ -27,8 +27,12 @@ The guaranteed amount is **2 pearls, plus 1 for every 10 player levels**:
 | 20–29 | 4 |
 | 30–39 | 5 |
 
-The first two taps can also give pearls, alongside sand dollars, algae or XP.
+The first two taps can also give pearls, alongside sand dollars or algae.
 Complete all three taps to receive the guaranteed pearl reward.
+
+Daily taps do not award XP: the original daily-reward screen cannot display
+an XP-only result safely. Its old XP chance now awards algae instead. An extra
+claim after the three daily rewards is rejected without changing your balance.
 
 The ad-funded extra tap and the pearl-spending “get everything” option are
 hidden. The three normal daily taps remain available. In-game pearl prices
