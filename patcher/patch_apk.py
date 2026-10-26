@@ -24,6 +24,10 @@ import pvrtc
 
 LIB = 'lib/armeabi/libsdr.so'
 DEX = 'classes.dex'
+# The game ships its ARM code as "armeabi" (ARMv5), which newer devices and emulators such as BlueStacks no longer
+# list among their ABIs, so they refuse to install it ("no matching ABIs"). ARMv7 runs the same code, and every
+# 32-bit ARM device or translator accepts armeabi-v7a, so the libraries move there.
+OLD_ABI, NEW_ABI = 'lib/armeabi/', 'lib/armeabi-v7a/'
 ACCOUNT_URL = b'http://nemo.apps.tapulous.com/nemo/api/'
 GAME_URL = b'http://nemo.pragueweb.tapulous.com/nemo/'
 
@@ -219,7 +223,15 @@ def rebuild(apk_in, apk_out, lib, dex, music=None):
             if info.filename.startswith('META-INF/') and info.filename.rsplit('.', 1)[-1] in ('SF', 'RSA', 'DSA', 'MF', 'EC'):
                 continue  # old signature
             data = {LIB: lib, DEX: dex}.get(info.filename) or zin.read(info.filename)
+            if info.filename.startswith(OLD_ABI):
+                info = copy_info(info, NEW_ABI + info.filename[len(OLD_ABI):])
             zout.writestr(info, data, compress_type=info.compress_type)
+
+
+def copy_info(info, name):
+    out = zipfile.ZipInfo(name, date_time=info.date_time)
+    out.compress_type, out.external_attr = info.compress_type, info.external_attr
+    return out
 
 
 def sign(apk, signer_jar):
@@ -267,9 +279,11 @@ def main():
     print('account API -> %s\ngame API    -> %s' % (account_url, game_url))
     if sign(out, signer):
         print('wrote signed %s' % out)
-    else:
-        print('wrote UNSIGNED %s: put uber-apk-signer.jar next to this script (or pass --signer), '
-              'or install the Android SDK build-tools (apksigner), then run again' % out)
+    else:  # Android refuses to install an unsigned APK ("package appears to be invalid")
+        os.remove(out)
+        sys.exit('could not sign the APK, so nothing was written: put uber-apk-signer.jar in the patcher folder '
+                 '(or pass --signer) and make sure Java is installed, or install the Android SDK build-tools '
+                 '(apksigner), then run again')
 
 
 if __name__ == '__main__':
