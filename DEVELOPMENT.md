@@ -30,6 +30,30 @@ Key files:
   and [game-action notes](https://github.com/lozza/nemos-reef-revival/blob/re-notes/ACTIONS.md):
   reverse-engineering references.
 
+## Economy profiles
+
+The default `revival` profile enables the algae exchange and seed changes.
+Use `--economy classic` or `NEMO_ECONOMY=classic` to select the previous
+catalogue. See [the player and host guide](ECONOMY.md).
+
+- `server/economy.py` defines seed rarity groups, the guarantee, timer migration,
+  exchange prices, persisted UTC-day limits and request receipts.
+- `server/economy_ui.py` generates corrected exchange screens from the host's
+  own APK. No original artwork or compiled UI assets are included in the repo.
+  The server supplies these two generated resources through the game's existing
+  resource-download system. Classic mode supplies the original files for rollback.
+- Exchange costs and rewards are server-defined. A successful exchange saves
+  balances, quota and its receipt together; client-supplied rewards are ignored.
+- The mystery-seed guarantee is account-wide and survives reconnects. Existing
+  seed results and paid growing stages are retained.
+- Production-rate adjustments and pearl exchanges are not part of this profile.
+
+The patcher fixes the exchange flow's hardcoded pearl balance check and uses
+the game API route `/nemo/e1/` to advertise this capability. Older routes still
+work for normal play and the seed changes, but receive no exchange offers.
+The account API route stays unchanged. Server-side validation remains the
+authority for prices, balances and daily limits.
+
 ## Local Docker builds
 
 From the source checkout:

@@ -19,6 +19,7 @@ import os
 import time
 
 import worlddef
+import economy
 
 STORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'story.json')
 RUNNING, OFFERED = 9, 8
@@ -63,12 +64,14 @@ NAME_FIXES = {
 
 
 class Story:
-    def __init__(self, path=STORY, kids=False):
+    def __init__(self, path=STORY, kids=False, economy_mode=None):
         """kids: build the Kids edition's worldDef (players under the game's age limit): the Kids missions' texts,
         hints and easier combinations. Quest progress works the same for both."""
         self.kids = kids
         with open(path, encoding='utf-8') as f:
             self.data = json.load(f)
+        self.economy_mode = economy.mode(economy_mode)
+        economy.configure_story(self.data, self.economy_mode)
         self.quests = {q['id']: q for q in self.data['quests']}
         self.renamed = self.data.get('renamed', {})
 
@@ -165,6 +168,9 @@ class Story:
             self.open(w, q['id'], push)
 
     def extend_worlddef(self, wd):
+        wd['revivalEconomy'] = self.economy_mode
+        if self.economy_mode == 'revival':
+            wd['exchangePackagePrototypes'] = economy.packages(economy.MIN_LEVEL)
         self.windows = self.event_windows(int(time.time() * 1000))
         now = int(time.time() * 1000)  # rebuilt when an event window opens or closes (seasonal shop items)
         self.treasure = {fid: self.month_window(m1, m2, now) for fid, (m1, m2) in TREASURE_FISH.items()}
@@ -662,6 +668,8 @@ class NoStory(Story):
 
     def __init__(self, kids=False):
         self.kids = kids
+        self.economy_mode = 'classic'
         self.data = {'quests': [], 'dialogs': [], 'hints': [], 'patterns': []}
         self.quests = {}
         self.renamed = {}
+

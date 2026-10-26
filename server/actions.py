@@ -11,6 +11,7 @@ import random
 import time
 
 import worlddef
+import economy
 # server ids must stay below the client's temporary ids (EntityIdGenerator starts at 1,000,000)
 MAX_ENTITY_ID = 999999
 
@@ -25,6 +26,12 @@ GROWABLE = ('ET_CORAL', 'ET_LIVING_PLANT', 'ET_ORN_PLANT', 'ET_RARE_PLANT')
 HARVESTABLE = ('ET_CORAL', 'ET_LIVING_PLANT', 'ET_RARE_PLANT')
 
 
+class ActionRejected(Exception):
+    def __init__(self, code, message):
+        self.code, self.message = code, message
+        super().__init__(message)
+
+
 def interval(start, length):
     return {'start': start, 'finish': start + length}
 
@@ -33,6 +40,7 @@ class Prototypes:
     """Lookup of worldDef prototypes by id, with the list each entity type is stored in."""
 
     def __init__(self, wd):
+        self.economy_mode = wd.get('revivalEconomy', 'classic')
         self.by_id = {}
         world_list = {'coralPrototypeList': 'corals', 'livingPlantPrototypeList': 'livingPlants',
                       'ornamentalPlantPrototypeList': 'ornamentalPlants', 'rarePlantPrototypeList': 'rarePlants',
@@ -190,7 +198,11 @@ class Reef:
         r = {'aid': action.get('aid'), 'resultCode': 200}
         handler = getattr(self, 'a_' + str(name), None)
         if handler:
-            data = handler(w, d, now)
+            try:
+                data = handler(w, d, now)
+            except ActionRejected as exc:
+                return {'aid': action.get('aid'), 'resultCode': exc.code,
+                        'data': {'errorMessage': exc.message}}
             if data is not None:
                 r['data'] = data
         return r
@@ -245,15 +257,23 @@ class Reef:
     def a_seedEntitySeed(self, w, d, now):
         # A mystery seed grows into a random plant from its "seedResults" (story.json items "results").
         _, seed = self.protos.get(d.get('prototypeId'))
-        self.pay(w, self.protos.shop_cost(d.get('prototypeId'), self.level(w)) or (seed or {}).get('cost'))
+        price = self.protos.shop_cost(d.get('prototypeId'), self.level(w)) or (seed or {}).get('cost')
         choices = [pid for pid in (seed or {}).get('seedResults', []) if self.protos.get(pid)[0]]
-        plant = random.choice(choices) if choices else next(
-            (pid for pid, (lst, p) in self.protos.by_id.items() if lst == 'livingPlants'), None)
+        if self.protos.economy_mode == 'revival' and d.get('prototypeId') in economy.SEEDS:
+            if any(int(w['status'].get(k, 0)) < int(v) for k, v in (price or {}).items()):
+                raise ActionRejected(402, 'Not enough currency for this seed')
+            plant = economy.choose_seed(w, d['prototypeId'], choices)
+        else:
+            plant = random.choice(choices) if choices else next(
+                (pid for pid, (lst, p) in self.protos.by_id.items() if lst == 'livingPlants'), None)
+        self.pay(w, price)
         lst, p = self.protos.get(plant)
         e = {'id': self.new_id(w), 'prototypeId': plant, 'seedPrototypeId': d.get('prototypeId'),
              'position': {'x': int(d.get('x', 0)), 'z': int(d.get('z', 0)), 'transform': int(d.get('transform', 0)) & 1},
              'state': WAITING_FEED, 'seeded': now, 'growingCycle': 0}
         w.setdefault(lst or 'livingPlants', []).append(e)
+        if self.protos.economy_mode == 'revival':
+            e['seedEconomyVersion'] = economy.VERSION
         return {'id': e['id'], 'seeded': now, 'prototypeId': plant}
 
     def a_entityMove(self, w, d, now):
@@ -282,6 +302,11 @@ class Reef:
     def grow(self, w, e, now, pay=True):
         p = self.growth_proto(e)
         if pay:
+            if (self.protos.economy_mode == 'revival'
+                    and e.get('seedPrototypeId') in economy.SEEDS
+                    and any(int(w['status'].get(k, 0)) < int(v)
+                            for k, v in p.get('growingCycleCost', {}).items())):
+                raise ActionRejected(402, 'Not enough algae to feed this seed')
             self.pay(w, p.get('growingCycleCost'))
         e['growingCycle'] = min(e.get('growingCycle', 0) + 1, int(p.get('growingCycles', 1)))
         e['growingInterval'] = interval(now, self.ms(p, 'growingTime'))
@@ -562,3 +587,4 @@ class Reef:
         if d.get('reward'):
             self.earn(w, d['reward'])
         return {'questFinished': bool(d.get('finished'))}
+

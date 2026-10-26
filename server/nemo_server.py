@@ -7,6 +7,7 @@ Answers both the Tapulous account API and the game API (see PROTOCOL.md and ACTI
 response is appended to <data>/requests.log as JSON lines so unknown calls can be studied.
 """
 import argparse
+import copy
 import email.parser
 import email.policy
 import hashlib
@@ -27,6 +28,8 @@ import iscn
 import quests
 import texts
 import worlddef
+import economy
+import economy_ui
 
 # 128-byte table from cypher::XorCypher::xorFuncChar; getDaWorld bodies are XORed with key[i & 0x7f].
 XOR_KEY = bytes.fromhex(
@@ -175,7 +178,8 @@ class Game:
         self.log_path = os.path.join(args.data, 'requests.log')
         self.log_lock = threading.Lock()
         self.world_lock = threading.Lock()
-        self.story = quests.NoStory() if args.no_story else quests.Story()
+        self.story = (quests.NoStory() if args.no_story else
+                      quests.Story(economy_mode=getattr(args, 'economy', None)))
         if args.worlddef:
             with open(args.worlddef, 'rb') as f:
                 self.worlddef = json.load(f)
@@ -190,6 +194,8 @@ class Game:
         # (GameTextManager::existTextBundle), so the id covers every text the server sends.
         h = hashlib.sha1(str(self.worlddef.get('localizedTextsBundleId')).encode())
         h.update(json.dumps(texts.build(args.apk, 'en'), sort_keys=True).encode('utf-8'))
+        if self.story.economy_mode == 'revival':
+            h.update(json.dumps(economy_ui.TEXTS, sort_keys=True).encode('utf-8'))
         bundle_id = 2 + int(h.hexdigest()[:7], 16)
         # The Kids edition (age under the game's limit) gets its own worldDef; getCurrentWorldVersion tells each
         # player which one, and the client downloads it by version.
@@ -198,6 +204,7 @@ class Game:
         self.publish_worlddefs()
         with zipfile.ZipFile(args.apk) as z:
             self.bundles = json.loads(z.read('assets/bundle.json'))
+            self.economy_assets = economy_ui.build(z, revival=self.story.economy_mode == 'revival')
             # The designed starting layout; nemo_2/_3 are later upgrade stages of the same anemone and
             # Peach's house belongs to a later area.
             self.starter = [e for e in iscn.entities(z.read('assets/level.iscn'))
@@ -296,14 +303,35 @@ class Game:
         if rebuild:
             self.worlddef = worlddef.build(self.args.apk, self.story)
         self.worlddefs = {False: self.worlddef}
+        self.player_world_versions = {}
+        self.worlddef_blobs = {}
         if not self.args.worlddef and not self.args.no_story:
-            self.worlddefs[True] = worlddef.build(self.args.apk, quests.Story(kids=True))
+            self.worlddefs[True] = worlddef.build(self.args.apk, quests.Story(
+                kids=True, economy_mode=self.story.economy_mode))
         for kids, wd in self.worlddefs.items():
             wd['localizedTextsBundleId'] = self.bundle_id
             worlddef.finish(wd)  # new version stamp, so clients fetch the definition with the new id
             self.world_versions[kids] = str(wd['version'])
             self.worlddef_blobs[str(wd['version'])] = xor(json.dumps(wd, separators=(',', ':')).encode('utf-8'))
         self.world_version = self.world_versions[False]
+
+    def player_world_version(self, w, exchange_client=False):
+        """A level-sized exchange catalogue; immutable versions keep prices honest."""
+        kids = bool(w and w.get('kids'))
+        if self.story.economy_mode != 'revival' or self.args.worlddef:
+            return self.world_versions.get(kids, self.world_version)
+        level = max(1, min(economy.MAX_LEVEL,
+                    int((w or {}).get('status', {}).get('level', 1))))
+        key = (kids, level, bool(exchange_client))
+        with self.world_lock:
+            if key not in self.player_world_versions:
+                wd = copy.deepcopy(self.worlddefs.get(kids, self.worlddef))
+                wd['exchangePackagePrototypes'] = economy.packages(level) if exchange_client else []
+                worlddef.finish(wd)
+                version = str(wd['version'])
+                self.worlddef_blobs[version] = xor(json.dumps(wd, separators=(',', ':')).encode('utf-8'))
+                self.player_world_versions[key] = version
+            return self.player_world_versions[key]
 
     def game(self, endpoint, p):
         until = getattr(self.story, 'events_until', 0)
@@ -324,10 +352,13 @@ class Game:
 
         if endpoint == 'getdaworld':
             version = p.get('worldVersion') or req.get('worldVersion') or ''
-            return self.worlddef_blobs.get(version) or self.worlddef_blobs[self.world_version], 'application/octet-stream'
+            if version not in self.worlddef_blobs:
+                version = self.player_world_version(self.store.world(uid) if uid else None,
+                                                    p.get('_exchange_client', False))
+            return self.worlddef_blobs[version], 'application/octet-stream'
         if endpoint == 'getcurrentworldversion':
             w = self.store.world(uid) if uid else None
-            body = {'worldVersion': self.world_versions.get(bool(w and w.get('kids')), self.world_version)}
+            body = {'worldVersion': self.player_world_version(w, p.get('_exchange_client', False))}
         elif endpoint in ('gettutorialworld', 'getfriendworld'):
             body = self.friend_world(uid, req.get('friendUid') if endpoint == 'getfriendworld' else None)
         elif endpoint == 'startgame':
@@ -335,6 +366,9 @@ class Game:
             if w:
                 with self.world_lock:
                     self.reef.events = []
+                    if self.story.economy_mode == 'revival':
+                        economy.migrate_seed_timers(w, now_ms())
+                        economy.start_session(w)
                     self.reef.refresh(w, now_ms())
                     # "age" (ActionStartGame): 1 = under the age limit the player entered, 2 = at or over it
                     if req.get('age') in (1, 2):
@@ -356,7 +390,8 @@ class Game:
                     self.unstick_quests(w)
                     self.store.save_world(uid, w)
             body = dict(w or new_world({'uid': uid, 'name': 'Diver'}))
-            for k in ('nextEntityId', 'nextQuestId', 'nextMessageId', 'messages', 'patterns'):
+            for k in ('nextEntityId', 'nextQuestId', 'nextMessageId', 'messages', 'patterns',
+                      'exchangeSession', 'exchangeReceipts', 'algaeExchange', 'mysterySeedMisses'):
                 body.pop(k, None)
             # World::processUserWorld passes the root to data::TheUser::updateUserInfo
             body['resumeGame'] = user_info(w)['resumeGame']
@@ -367,7 +402,7 @@ class Game:
             self.store.delete_world(uid)
             body = {}
         elif endpoint == 'resources':
-            body = self.bundles
+            body = economy_ui.bundle(self.bundles, self.economy_assets, p.get('_asset_base', ''))
         elif endpoint == 'getfriendstatus':
             # data::FriendList::update reads "participants" (a missing key crashes): level and co-op state per friend
             body = {'participants': []}
@@ -386,12 +421,15 @@ class Game:
             if lang not in self.texts:
                 self.texts[lang] = texts.build(self.apk, lang)
                 self.texts[lang].update(self.story.texts())
+                if self.story.economy_mode == 'revival':
+                    self.texts[lang].update(economy_ui.TEXTS)
             body = {'texts': self.texts[lang]}
         else:  # '/api': queued game actions
             with self.world_lock:
                 w = self.user_world(uid)
                 self.reef.events = []
-                body = {'reactions': [self.reaction(w, a) for a in req.get('actions', [])]}
+                body = {'reactions': [self.reaction(w, a, req.get('stamp'),
+                                     p.get('_exchange_client', False)) for a in req.get('actions', [])]}
                 if w:
                     self.reef.refresh(w, now_ms())
                     self.push_events(w)
@@ -407,7 +445,7 @@ class Game:
                     self.store.save_world(uid, w)
         return json.dumps(self.envelope(body, req)).encode('utf-8'), 'application/json'
 
-    def reaction(self, w, action):
+    def reaction(self, w, action, stamp=None, exchange_client=False):
         if action.get('action') == 'resumeGame':
             return {'aid': action.get('aid'), 'resultCode': 200, 'data': user_info(w)}
         if w is None:
@@ -415,6 +453,12 @@ class Game:
         try:
             name, d = action.get('action'), action.get('data') or {}
             ok = {'aid': action.get('aid'), 'resultCode': 200}
+            if name == 'exchangeMoney':
+                if not exchange_client:
+                    return {'aid': action.get('aid'), 'resultCode': 403,
+                            'data': {'errorMessage': 'Update the APK patch for algae exchanges.'}}
+                return dict(economy.exchange(w, d, stamp, action.get('aid'), now_ms(),
+                                             self.story.economy_mode), aid=action.get('aid'))
             if name == 'questTaskSetState':
                 return dict(ok, data=self.story.task_state(w, d, lambda q, r: self.quest_done(w, q, r)))
             if name == 'questStart':
@@ -737,7 +781,21 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get('Content-Length') or 0)
         body = self.rfile.read(n) if n else b''
         path, p = self.params(body)
+        p['_asset_base'] = 'http://' + self.headers.get('Host', '127.0.0.1:8080')
         segs = [s for s in path.split('/') if s]
+        p['_exchange_client'] = len(segs) > 1 and segs[:2] == ['nemo', 'e1']
+        if len(segs) == 4 and segs[:2] == ['nemo', 'revival-ui']:
+            payload = self.game.economy_assets.get(segs[3])
+            if payload is None or hashlib.sha1(payload).hexdigest() != segs[2]:
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            print('served revival UI:', segs[3])
+            return
         endpoint = (segs[-1] if segs else '').lower()
         if 'resources' in [s.lower() for s in segs]:
             endpoint = 'resources'
@@ -776,6 +834,8 @@ def main():
     ap.add_argument('--reset-all', action='store_true',
                     help='delete every account and reef; every device starts as a new player')
     ap.add_argument('--no-story', action='store_true', help='turn off the story quests (story.json)')
+    ap.add_argument('--economy', choices=('classic', 'revival'), default=economy.mode(),
+                    help='economy profile (default: NEMO_ECONOMY or revival)')
     ap.add_argument('--event', action='append', default=[], metavar='QUEST_ID',
                     help='run this time event now, e.g. time_event_bruce (testing; may be repeated)')
     args = ap.parse_args()
@@ -789,3 +849,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+

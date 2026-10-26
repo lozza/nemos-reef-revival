@@ -71,6 +71,10 @@ a device that only runs 64-bit apps.
 Keep the server running, then open the game. On a new installation, choose
 your player name when asked.
 
+**For the algae exchange:** download the latest project ZIP and patch the original
+APK again. Update the server too. The exchange stays hidden on older patched
+APKs; the server's seed changes work with those older APKs.
+
 **Already playing?** Keep the existing app data and use the same signing setup
 when installing an update. Do not uninstall or clear app data to fix an update:
 see [installation troubleshooting](TROUBLESHOOTING.md#android-will-not-install-the-apk)

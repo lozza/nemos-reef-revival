@@ -20,6 +20,9 @@ For the changes we've made to the original game, see
 - Mr. Ray's daily homework from about level 9.
 - Seasonal events on their dates, and other events rotating on weekends from level 6.
 
+- Sand-dollar/algae exchanges from level 6 and reduced mystery-seed costs/timers.
+  See [Algae exchange and mystery seeds](ECONOMY.md).
+
 ## Still missing or imperfect
 
 Co-op quests are not implemented. The Android Studio emulator can draw some

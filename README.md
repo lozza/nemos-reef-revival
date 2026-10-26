@@ -24,7 +24,9 @@ the original APK; a separate patched copy runs on your Android device.
 ## What's different from the original?
 
 Small fish stay visible when you zoom out, and the final daily reward tap
-now guarantees pearls because real-money purchases are unavailable.
+now guarantees pearls because real-money purchases are unavailable. You can
+also exchange sand dollars for algae, and mystery seeds cost less algae to grow.
+Existing players need the latest APK patch to use the exchange.
 See [Changes from the original game](CHANGES.md) for the full list, including
 event schedules and compatibility fixes.
 

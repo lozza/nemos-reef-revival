@@ -34,6 +34,32 @@ The ad-funded extra tap and the pearl-spending “get everything” option are
 hidden. The three normal daily taps remain available. In-game pearl prices
 and spending still apply.
 
+## Spend sand dollars on algae
+
+From level 6, the algae shop offers packs bought with sand dollars. Each pack
+contains **20 × your level** algae and costs **40 × your level** sand dollars.
+You can buy up to **three packs per account each day**; the limit resets at
+midnight UTC. Exchanges award no XP or pearls.
+
+Exchange offers require the latest APK patch as well as the server update.
+The patch fixes the original screen's hardcoded pearl-balance check. Offers
+remain hidden on older patched APKs.
+
+## Mystery seeds take less waiting
+
+Mystery, Enigmatic and Extraordinary Seeds now take **45 minutes, 1 hour and
+15 minutes** to grow, with **180, 450 and 30 algae** needed across three feeds.
+Their rare chances are **25%, 75% and 100%**. After four non-rare Mystery Seed
+results in a row, the next Mystery Seed guarantees a rare plant.
+
+Existing plants keep their identity and paid feeding stages. The server also
+recovers missed seed-quest progress when a saved plant contains evidence of
+the seed it grew from; an ornamental plant still cannot count as a rare one.
+
+See [Algae exchange and mystery seeds](ECONOMY.md) for prices, limits and the
+host setting for using the previous economy. General production rates and
+pearl exchanges are unchanged.
+
 ## Events come back
 
 Seasonal events return each year around Christmas, Halloween, Valentine's
@@ -68,9 +94,9 @@ Fish visibility and Android compatibility fixes are included when you
 [patch the APK](PATCHING.md). An older patched APK needs to be patched again
 to pick up those changes; keep your app data when installing the update.
 
-Daily rewards, event schedules and the large-event task-window fix come from
-the server. They work with both Windows and Docker. Updating the server does
-not require repatching the APK.
+Daily rewards, seed settings, event schedules and quest fixes come from the
+server and work with both Windows and Docker. Those changes do not need another
+APK patch. The algae exchange also needs the updated APK patch described above.
 
 ## About the reconstruction
 

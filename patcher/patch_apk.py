@@ -63,6 +63,15 @@ SETTINGS_PATCH = (0x5308b8, bytes.fromhex('0b3b'), bytes.fromhex('0023'))
 # `strb r3, [r4, r2]` with a nop: they stay visible at every zoom.
 AMBIENT_FADE_PATCH = (0x2a5384, bytes.fromhex('a354'), bytes.fromhex('c046'))
 
+# DialogFlowExchange checks pearls regardless of the catalogue's currency.
+# Revival exchanges spend sand dollars. Change only this flow's balance getter
+# and its two insufficient-funds dialog references, leaving pearl shops intact.
+EXCHANGE_BALANCE_AT = 0x4697bc
+EXCHANGE_DIALOG_PATCHES = (
+    (0x469864, bytes.fromhex('be597c00'), bytes.fromhex('b6597c00')),
+    (0x46979c, bytes.fromhex('705a7c00'), bytes.fromhex('685a7c00')),
+)
+
 
 # SdrRoot.init(SdrActivity, int, int) stores data under /sdcard/Android/data/<pkg>/files, which apps this
 # old may no longer create on Android 11+ (logins and caches are then never saved). Turning the
@@ -140,6 +149,14 @@ def patch_lib(lib, account_url, game_url, debug_log, emulator):
     lib = bytearray(lib)
     replace_cstring(lib, ACCOUNT_URL, account_url.encode())
     replace_cstring(lib, GAME_URL, game_url.encode())
+    at = EXCHANGE_BALANCE_AT
+    if lib[at:at + 4] != thumb2_bl(at, 0x234738):
+        sys.exit('unexpected exchange balance check; is this the 1.8.1 APK?')
+    lib[at:at + 4] = thumb2_bl(at, 0x23473c)
+    for at, old, new in EXCHANGE_DIALOG_PATCHES:
+        if lib[at:at + 4] != old:
+            sys.exit('unexpected exchange dialog at %#x' % at)
+        lib[at:at + 4] = new
     if debug_log:
         for src, dst in DEBUG_PATCHES:
             if lib[src:src + 2] != b'\x70\x47':  # bx lr
@@ -238,7 +255,8 @@ def main():
     args = ap.parse_args()
 
     base = args.server.rstrip('/')
-    account_url, game_url = base + '/nemo/api/', base + '/nemo/'
+    # The route advertises the native sand-dollar exchange fix to the server.
+    account_url, game_url = base + '/nemo/api/', base + '/nemo/e1/'
     out = args.output or os.path.splitext(args.apk)[0] + '-private.apk'
     signer = args.signer or next(iter(sorted(glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uber-apk-signer*.jar')))), None)
 
