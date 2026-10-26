@@ -368,6 +368,7 @@ class Game:
                     self.reef.events = []
                     if self.story.economy_mode == 'revival':
                         economy.migrate_seed_timers(w, now_ms())
+                        economy.migrate_progression(w, self.reef.protos, self.story.quests, now_ms())
                         economy.start_session(w)
                     self.reef.refresh(w, now_ms())
                     # "age" (ActionStartGame): 1 = under the age limit the player entered, 2 = at or over it
@@ -391,7 +392,8 @@ class Game:
                     self.store.save_world(uid, w)
             body = dict(w or new_world({'uid': uid, 'name': 'Diver'}))
             for k in ('nextEntityId', 'nextQuestId', 'nextMessageId', 'messages', 'patterns',
-                      'exchangeSession', 'exchangeReceipts', 'algaeExchange', 'mysterySeedMisses'):
+                      'exchangeSession', 'exchangeReceipts', 'algaeExchange', 'mysterySeedMisses',
+                      'progressionEconomyVersion'):
                 body.pop(k, None)
             # World::processUserWorld passes the root to data::TheUser::updateUserInfo
             body['resumeGame'] = user_info(w)['resumeGame']

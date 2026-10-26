@@ -56,9 +56,26 @@ Existing plants keep their identity and paid feeding stages. The server also
 recovers missed seed-quest progress when a saved plant contains evidence of
 the seed it grew from; an ornamental plant still cannot count as a rare one.
 
-See [Algae exchange and mystery seeds](ECONOMY.md) for prices, limits and the
-host setting for using the previous economy. General production rates and
-pearl exchanges are unchanged.
+## A reef you can grow without purchases
+
+Nursery growth now needs at most **25 × the plant's unlock level algae** and
+takes at most **one hour** across its feeding stages. Cheaper or quicker plants
+stay cheaper or quicker. Slow producers give larger harvests and wait at most
+four hours. For example, Bamboo Coral gives 240 algae every four hours rather
+than 50 each day. The short starter harvests remain available.
+
+Main-story and Tank Gang milestones from level 6 award **two to four pearls**.
+Level-ups give at least one pearl, or three at multiples of five. Rare-fish
+feeding costs cap at **250 algae per pearl produced**, with waits capped at
+24 hours. The recurring premium rare-seed sales prompt is disabled.
+
+Existing saves keep their plants, balances and quest progress. Completed
+eligible story milestones receive the added pearl bonus once on reconnecting.
+Past XP and resource rewards are not paid again.
+
+See [Revival economy](ECONOMY.md) for prices, limits and the host setting for
+using the previous economy, or [balance examples](BALANCE.md) for the numbers.
+These settings are a first balance pass and will need longer-term play feedback.
 
 ## Events come back
 
@@ -94,7 +111,7 @@ Fish visibility and Android compatibility fixes are included when you
 [patch the APK](PATCHING.md). An older patched APK needs to be patched again
 to pick up those changes; keep your app data when installing the update.
 
-Daily rewards, seed settings, event schedules and quest fixes come from the
+Production, growth costs, pearl rewards, seed settings, event schedules and quest fixes come from the
 server and work with both Windows and Docker. Those changes do not need another
 APK patch. The algae exchange also needs the updated APK patch described above.
 

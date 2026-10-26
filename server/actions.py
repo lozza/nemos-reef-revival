@@ -100,6 +100,11 @@ class Reef:
         for k in CURRENCIES:
             st[k] = max(0, st.get(k, 0) + sign * int((cost or {}).get(k, 0)))
 
+    def require_funds(self, w, cost):
+        if self.protos.economy_mode == 'revival' and any(
+                int(w['status'].get(k, 0)) < int((cost or {}).get(k, 0)) for k in CURRENCIES):
+            raise ActionRejected(402, 'Not enough currency.')
+
     @staticmethod
     def level(w):
         return int(w.get('status', {}).get('level', 1))
@@ -212,8 +217,6 @@ class Reef:
         lst, p = self.protos.get(pid)
         if not lst:
             return None, None, None
-        e = {'id': self.new_id(w), 'prototypeId': pid,
-             'position': {'x': int(d.get('x', 0)), 'z': int(d.get('z', 0)), 'transform': int(d.get('transform', 0)) & 1}}
         price = self.protos.shop_cost(pid, self.level(w)) or p.get('cost')
         if p.get('type') == 'ET_PATCH':  # the Nth patch costs what vitalityPatchList says for it
             n = len(w.get('patches', []))
@@ -222,6 +225,10 @@ class Reef:
                 price = row['cost']
         if d.get('early'):  # GET IT EARLY: the price times the multiplier, plus free algae
             price = {k: v * worlddef.GET_IT_EARLY_MULTIPLIER for k, v in (price or {}).items()}
+        self.require_funds(w, price)
+        e = {'id': self.new_id(w), 'prototypeId': pid,
+             'position': {'x': int(d.get('x', 0)), 'z': int(d.get('z', 0)), 'transform': int(d.get('transform', 0)) & 1}}
+        if d.get('early'):
             self.earn(w, {'energy': worlddef.GET_IT_EARLY_ALGAE})
         self.pay(w, price)
         w.setdefault(lst, []).append(e)
@@ -302,11 +309,7 @@ class Reef:
     def grow(self, w, e, now, pay=True):
         p = self.growth_proto(e)
         if pay:
-            if (self.protos.economy_mode == 'revival'
-                    and e.get('seedPrototypeId') in economy.SEEDS
-                    and any(int(w['status'].get(k, 0)) < int(v)
-                            for k, v in p.get('growingCycleCost', {}).items())):
-                raise ActionRejected(402, 'Not enough algae to feed this seed')
+            self.require_funds(w, p.get('growingCycleCost'))
             self.pay(w, p.get('growingCycleCost'))
         e['growingCycle'] = min(e.get('growingCycle', 0) + 1, int(p.get('growingCycles', 1)))
         e['growingInterval'] = interval(now, self.ms(p, 'growingTime'))
@@ -356,9 +359,16 @@ class Reef:
         p = p or {}
         if p.get('type') == 'ET_PATCH':  # a full patch yields what its upgraded plant produces
             p = dict(self.patch_plant(e), type='ET_PATCH')
+        if self.protos.economy_mode == 'revival':
+            performed = min(int(d.get('performed') or now), now)
+            pi = e.get('producingInterval')
+            ready = (e.get('state') == READY or (e.get('state') == PRODUCING
+                     and pi and int(pi['finish']) <= performed))
+            if e.get('inventory') or not ready or (pi and int(pi['finish']) > performed):
+                raise ActionRejected(409, 'This harvest is not ready.')
         self.earn(w, p.get('producedReward'))
         if p.get('type') in HARVESTABLE or p.get('type') == 'ET_PATCH':
-            start = int(d.get('performed') or now)
+            start = min(int(d.get('performed') or now), now)
             e['state'] = PRODUCING
             e['producingInterval'] = interval(start, self.ms(p, 'producingTime'))
             return {'producingInterval': e['producingInterval']}
@@ -371,7 +381,14 @@ class Reef:
         if not e:
             return {'producingInterval': interval(now, 0)}
         _, p = self.protos.get(e['prototypeId'])
+        if self.protos.economy_mode == 'revival' and (p or {}).get('producedReward', {}).get('hardMoney'):
+            pi = e.get('producingInterval')
+            if e.get('state') != PRODUCING or not pi:
+                raise ActionRejected(409, 'Feed this fish before speeding it up.')
+            if not paid and int(pi['finish']) - now > 60000:
+                raise ActionRejected(403, 'This fish is not ready for a free speed-up.')
         if paid:
+            self.require_funds(w, (p or {}).get('producingSpeedupCost'))
             self.pay(w, (p or {}).get('producingSpeedupCost'))
         pi = e.get('producingInterval') or interval(now, 0)
         e['producingInterval'] = {'start': pi['start'], 'finish': now}
@@ -439,6 +456,10 @@ class Reef:
         _, e = self.find(w, d.get('id'))
         _, p = self.protos.get((e or {}).get('prototypeId'))
         p = p or {}
+        if self.protos.economy_mode == 'revival':
+            if not e or e.get('state', BUILT) in (PRODUCING, READY):
+                raise ActionRejected(409, 'This fish is already fed or has a reward to collect.')
+            self.require_funds(w, p.get('producingCost'))
         self.pay(w, p.get('producingCost'))
         pi = interval(now, self.ms(p, 'producingTime'))
         if e:

@@ -25,7 +25,9 @@ the original APK; a separate patched copy runs on your Android device.
 
 Small fish stay visible when you zoom out, and the final daily reward tap
 now guarantees pearls because real-money purchases are unavailable. You can
-also exchange sand dollars for algae, and mystery seeds cost less algae to grow.
+also exchange sand dollars for algae, grow plants with lower feeding costs,
+collect larger harvests from slow producers and earn pearls through story
+milestones, level-ups and more affordable rare-fish feeding.
 Existing players need the latest APK patch to use the exchange.
 See [Changes from the original game](CHANGES.md) for the full list, including
 event schedules and compatibility fixes.
@@ -38,6 +40,7 @@ event schedules and compatibility fixes.
 | Back up, restore or move an existing reef | [Saves and backups](SAVES.md) |
 | Fix a setup problem | [Troubleshooting](TROUBLESHOOTING.md) |
 | Understand the current game features | [Game status and playing](STATUS.md) |
+| See economy changes, pearl rewards and example budgets | [Revival economy](ECONOMY.md) |
 | Work on the server or use an emulator | [Development](DEVELOPMENT.md) |
 
 The server computer must stay on while you play. A NAS or mini PC can run it

@@ -67,4 +67,4 @@ each time; the double-click launcher always uses 8080.
 [Problems?](TROUBLESHOOTING.md) · [Backups and updates](SAVES.md)
 
 For algae exchanges, seed settings and the previous-economy option, see
-[Algae exchange and mystery seeds](ECONOMY.md).
+[Revival economy](ECONOMY.md).

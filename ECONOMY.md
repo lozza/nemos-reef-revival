@@ -1,9 +1,57 @@
-# Algae exchange and mystery seeds
+# Revival economy
 
 [All guides](README.md) · [Changes from the original game](CHANGES.md)
 
-The Revival economy gives surplus sand dollars a use and makes mystery seeds
-less demanding to grow. Real-money purchases remain unavailable.
+Grow your reef, complete quests and attract rare fish to earn what you need.
+The Revival balance reduces growth bottlenecks and provides pearls through play.
+Real-money purchases remain unavailable.
+
+## Plants and harvests
+
+- Nursery plants need at most **25 × their unlock level** algae across all
+  feeding stages. Already cheaper plants stay cheaper. Equal feeding stages
+  can make the total one or two algae below that ceiling.
+- Nursery growth takes at most **one hour** in total, assuming prompt feeding.
+  Shorter growth times stay shorter. Mystery seeds use their own rules below.
+- Producers with waits of 15 minutes or more give larger harvests. Their waits
+  cap at **four hours**. Starter plants with short timers keep their rewards.
+- A plant still holds one ready harvest. It does not accumulate days of output.
+
+For example, Bamboo Coral gives **240 algae every four hours**, instead of 50
+every day. Barrel Sponges give **800 sand dollars every four hours**, instead
+of 250 daily. Their total algae growth costs fall from 450 to 300 and from
+4,500 to 498 respectively. Purchase prices and unlock levels are unchanged.
+
+Where a production timer gets shorter, XP per harvest is reduced and rounded
+down so its maximum XP per hour does not increase. Upgraded Patches retain
+their fourfold harvest.
+
+## Earning pearls
+
+- The existing final daily reward tap guarantees **2 + floor(level / 10)** pearls.
+  The first two taps can also award pearls.
+- Ordinary level-ups give at least **one pearl**, with **three at every fifth
+  level**. Larger pre-existing rewards are retained.
+- Main story and Tank Gang milestones from level 6 give **two pearls**, rising
+  to three from level 20 and four from level 40. Side quests and repeating
+  minigames do not receive this bonus. Rewarded story quests from level 6 also
+  give at least **10 × their unlock level algae** and **20 × their level sand dollars**.
+- Pearl-producing rare fish cost at most **250 algae per pearl produced** and
+  take at most **24 hours**. Previously cheaper feeding costs stay cheaper.
+
+Rare fish still have to be attracted. A four-pearl Blue Bicolor Angelfish now
+costs 1,000 algae per feeding rather than 450,000. Rushing a pearl-producing
+fish costs one more pearl than its harvest gives, so rushing cannot multiply pearls.
+
+Premium nursery prices remain **3–25 pearls**, and an Extraordinary Seed stays
+at **10 pearls**. At level 10, the daily guarantee alone funds a 10-pearl seed
+in four days; quests and fish can shorten that. There is no sand-dollar/pearl
+exchange in this version: pearls come from playing and progressing.
+
+The recurring prompt to buy a premium rare seed is disabled.
+
+See [balance examples and assumptions](BALANCE.md) for early, middle and later
+reefs, daily earnings, growth costs and the reproducible session model.
 
 **Updating an existing setup:** update the server, then make a new patched APK
 with the latest [patcher](PATCHING.md) and install it over your current game.
@@ -83,5 +131,17 @@ usage and the Mystery Seed guarantee count. Classic mode uses the old seed
 feed costs and timers for future stages; it does not undo timers already
 shortened by the Revival profile.
 
-No pearl exchange or general production-rate increase is included in this
-stage of the rebalance.
+## Existing saves
+
+On the first connection after updating, completed eligible story milestones
+receive their newly added pearl bonuses once. Old quests are not replayed;
+their XP and other rewards are not paid again. Future level-ups use the new
+rewards; earlier level-ups are not paid again.
+
+Running plant and fish timers shorten proportionally if the new timer is
+shorter. Existing balances, identities, paid feeds and quest progress remain.
+Old feeding costs are not refunded. Selecting Classic keeps already earned
+rewards and shortened timers; restore a backup for an exact pre-update rollback.
+
+This is an initial balance pass. The numbers have been modelled and tested,
+but long-term pacing still needs feedback from different reefs and play schedules.

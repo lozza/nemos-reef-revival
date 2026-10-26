@@ -171,6 +171,9 @@ class Story:
         wd['revivalEconomy'] = self.economy_mode
         if self.economy_mode == 'revival':
             wd['exchangePackagePrototypes'] = economy.packages(economy.MIN_LEVEL)
+            # Remove the recurring premium-seed sales prompt; rare plants can
+            # be earned through the ordinary seed route.
+            wd['globalSettings']['lowVitality_minLevel'] = economy.MAX_LEVEL + 1
         self.windows = self.event_windows(int(time.time() * 1000))
         now = int(time.time() * 1000)  # rebuilt when an event window opens or closes (seasonal shop items)
         self.treasure = {fid: self.month_window(m1, m2, now) for fid, (m1, m2) in TREASURE_FISH.items()}
@@ -262,6 +265,7 @@ class Story:
                 p['vitality'] = it['hearts']
             if 'build' in it:
                 p['constructionTime'] = worlddef.duration(it['build'])
+            economy.balance_prototype(p, it, self.economy_mode)
             shop[pid] = worlddef.shop_item(p)
             if it.get('upgrade'):  # the plant a full Patch of these becomes: same look, four times the yield
                 u = copy.deepcopy(p)
@@ -307,6 +311,7 @@ class Story:
             r = lv.get('rewards', {}).get(str(l['level'])) or (
                 {} if l['level'] == 1 else {'virtualMoney': 50 * l['level'], 'energy': 20 + 5 * l['level'],
                                             'hardMoney': 1 if l['level'] % 5 == 0 else 0})
+            r = economy.level_reward(l['level'], r, self.economy_mode)
             l['reward'] = worlddef.reward(xp=0, coins=r.get('virtualMoney', 0), pearls=r.get('hardMoney', 0),
                                           algae=r.get('energy', 0))
             # Vitality caps (Level::LevelDefinition "vitality"): the total and one per category, 1 plants,
@@ -631,7 +636,11 @@ class Story:
         q = self.quests.get(e['prototypeId'], {})
         done = len(e['tasks']) >= len(q.get('tasks', [])) and all(t.get('finished') for t in e['tasks'])
         if done:
-            finish(q, d.get('reward') or q.get('reward'))
+            # Story rewards with new pearl bonuses use the current catalogue.
+            # Keep the separate minigame/event reward protocol unchanged.
+            r = (q.get('reward') if self.economy_mode == 'revival' and q.get('type') == 'STORY'
+                 else d.get('reward') or q.get('reward'))
+            finish(q, r)
             w['quests'].remove(e)
             if q.get('repeat'):  # Hide and Seek: always there again, catch_up reopens it
                 pass

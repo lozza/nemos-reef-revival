@@ -20,8 +20,10 @@ For the changes we've made to the original game, see
 - Mr. Ray's daily homework from about level 9.
 - Seasonal events on their dates, and other events rotating on weekends from level 6.
 
-- Sand-dollar/algae exchanges from level 6 and reduced mystery-seed costs/timers.
-  See [Algae exchange and mystery seeds](ECONOMY.md).
+- Revival balance: reduced growth costs, larger slow-producer harvests,
+  story/level-up pearls, affordable rare-fish feeding, improved mystery seeds
+  and a capped sand-dollar/algae exchange. See [Revival economy](ECONOMY.md)
+  and [balance examples](BALANCE.md). Longer-term pacing still needs player feedback.
 
 ## Still missing or imperfect
 

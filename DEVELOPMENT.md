@@ -32,7 +32,8 @@ Key files:
 
 ## Economy profiles
 
-The default `revival` profile enables the algae exchange and seed changes.
+The default `revival` profile enables the algae exchange, seed changes,
+production/growth balance and new pearl rewards.
 Use `--economy classic` or `NEMO_ECONOMY=classic` to select the previous
 catalogue. See [the player and host guide](ECONOMY.md).
 
@@ -46,11 +47,14 @@ catalogue. See [the player and host guide](ECONOMY.md).
   balances, quota and its receipt together; client-supplied rewards are ignored.
 - The mystery-seed guarantee is account-wide and survives reconnects. Existing
   seed results and paid growing stages are retained.
-- Production-rate adjustments and pearl exchanges are not part of this profile.
+- Production uses fixed native harvests. Nursery costs and pearl-fish feeding
+  are capped; story milestone and future level rewards supply pearls. A one-time
+  migration credits new pearl bonuses for completed eligible story milestones.
+  No sand-dollar/pearl exchange is provided.
 
 The patcher fixes the exchange flow's hardcoded pearl balance check and uses
 the game API route `/nemo/e1/` to advertise this capability. Older routes still
-work for normal play and the seed changes, but receive no exchange offers.
+work for normal play and the server-side economy, but receive no exchange offers.
 The account API route stays unchanged. Server-side validation remains the
 authority for prices, balances and daily limits.
 
@@ -89,6 +93,23 @@ startup. It is not needed for normal Android devices.
 with `.mp3` or `.ogg` extensions in a `music` folder. Add `--music music`
 to the patch command. The Windows batch patcher picks that folder up
 automatically. Music files are not provided.
+
+## Economy checks
+
+Run the automated checks with `python -m unittest discover -s tests -v`.
+They use synthetic assets; no game files or saved reefs are required.
+
+To reproduce the session model using your own original APK:
+
+```sh
+python tools/economy_report.py --apk nemo.apk --output BALANCE.md
+```
+
+The report compares the Classic and Revival catalogues without reading a save.
+It documents its schedules, costs and pearl-income assumptions. Use copied saves
+for device tests. The production balance uses native fixed harvests, not hidden
+banked rewards; shorter production timers round XP down to avoid raising the
+maximum XP rate.
 
 ## Android game logs
 

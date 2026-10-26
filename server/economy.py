@@ -1,4 +1,4 @@
-"""Revival economy v1: seeded plants and a capped sand-dollar/algae exchange.
+"""Revival economy: progression, production, pearls and a capped algae exchange.
 
 No real-money purchases or pearl exchanges are provided. Classic mode keeps
 the previous catalogue for hosts who want to opt out of the trial.
@@ -12,6 +12,7 @@ import re
 import uuid
 
 VERSION = 'revival-1'
+PROGRESSION_VERSION = 'revival-progression-1'
 MAX_PACKS = 3
 MIN_LEVEL = 6
 MAX_LEVEL = 60
@@ -46,6 +47,106 @@ def configure_story(data, profile):
         items[sid]['feed'] = policy['feed']
         items[sid]['step'] = policy['step']
         items[sid]['results'] = rare + (common if policy['rare'] < 1 else [])
+    for it in items.values():
+        pearls = int(it.get('produce', {}).get('hardMoney', 0))
+        if 'fishFeed' in it and pearls:
+            it['fishFeed'] = min(it['fishFeed'], 250 * pearls)
+            it['every'] = min(it['every'], 86400)
+    for q in data.get('quests', []):
+        # Repeating minigames/homework and narrative-only dialogs must not
+        # become a repeatable pearl faucet. Keep their original rewards.
+        if q.get('type') != 'STORY' or q.get('repeat') or not q.get('reward'):
+            continue
+        level = max(1, int(q.get('level', 1)))
+        if level < 6:
+            continue  # preserve the guided opening
+        r = q['reward']
+        r['energy'] = max(int(r.get('energy', 0)), 10 * level)
+        r['virtualMoney'] = max(int(r.get('virtualMoney', 0)), 20 * level)
+        if q['id'].startswith(('story_quest_', 'kids_story_quest_', 'tankgang_')):
+            r['hardMoney'] = max(int(r.get('hardMoney', 0)), 2 + level // 20)
+
+
+def balance_prototype(p, item, profile):
+    """Balance resolved prototypes, after inherited growth cycles are known.
+
+    Larger, capped harvests use the native single-harvest display. No hidden
+    banked rewards, fractional XP or new client collect semantics are needed.
+    """
+    if profile != 'revival':
+        return
+    pearls = int(p.get('producedReward', {}).get('hardMoney', 0))
+    if 'fishFeed' in item and pearls:
+        # A one-pearl speed-up must never manufacture four pearls repeatedly.
+        p['producingSpeedupCost'] = dict(p.get('producingSpeedupCost') or {},
+                                       hardMoney=pearls + 1)
+    if not (p['id'].startswith(('plant_', 'coral_', 'orn_plant_')) and item.get('price')):
+        return
+    level = max(1, int(item.get('level', 1)))
+    cycles = max(1, int(p.get('growingCycles', 1)))
+    feed = p.get('growingCycleCost', {})
+    feed['energy'] = min(int(feed.get('energy', 0)), 25 * level // cycles)
+    p['growingCycleCost'] = feed
+    growth = p.get('growingTime', {})
+    growth['duration'] = min(int(growth.get('duration', 0)), 3600000 // cycles)
+    p['growingTime'] = growth
+    old_ms = int(p.get('producingTime', {}).get('duration', 0))
+    r = p.get('producedReward', {})
+    currency = 'energy' if r.get('energy') else 'virtualMoney' if r.get('virtualMoney') else None
+    if currency is None or old_ms < 900000:
+        return  # keep the quick starter harvests and their XP intact
+    new_ms = min(old_ms, 14400000)  # four hours; a return visit has a substantial harvest
+    hourly = (5 if currency == 'energy' else 10) * level
+    r[currency] = max(int(r[currency]), math.ceil(hourly * new_ms / 3600000))
+    # Never multiply XP/hour merely by shortening a timer. Integer rounding
+    # goes down; XP remains unchanged when only currency output changes.
+    r['xp'] = int(r.get('xp', 0)) * new_ms // old_ms
+    p['producingTime'] = {'duration': new_ms}
+
+
+def level_reward(level, original, profile):
+    r = dict(original)
+    if profile == 'revival' and level >= 2:
+        r['hardMoney'] = max(int(r.get('hardMoney', 0)), 3 if level % 5 == 0 else 1)
+        r['energy'] = max(int(r.get('energy', 0)), 10 * level)
+    return r
+
+
+def migrate_progression(w, protos, quest_definitions, now):
+    """Preserve balances/identities/paid stages; shorten only longer timers once.
+
+    Previously completed, non-repeating story milestones receive their newly
+    added pearls once. Existing XP and past resource spending are untouched.
+    """
+    if w.get('progressionEconomyVersion') != PROGRESSION_VERSION:
+        done = set(w.get('finishedTutorialQuests', []))
+        bonus = sum(int(quest_definitions[q].get('reward', {}).get('hardMoney', 0))
+                    for q in done if q in quest_definitions
+                    and quest_definitions[q].get('type') == 'STORY'
+                    and not quest_definitions[q].get('repeat'))
+        w['status']['hardMoney'] = int(w['status'].get('hardMoney', 0)) + bonus
+        w['progressionEconomyVersion'] = PROGRESSION_VERSION
+    for name in ('corals', 'livingPlants', 'ornamentalPlants', 'rarePlants', 'fishes', 'patches'):
+        for e in w.get(name, []):
+            if e.get('progressionEconomyVersion') == PROGRESSION_VERSION:
+                continue
+            _, p = protos.get(e.get('plantPrototypeId') or e.get('prototypeId'))
+            if not p:
+                continue
+            pairs = [('producingInterval', 'producingTime')]
+            if not e.get('seedPrototypeId'):
+                pairs.append(('growingInterval', 'growingTime'))
+            for interval_key, duration_key in pairs:
+                gi = e.get(interval_key)
+                new = int(p.get(duration_key, {}).get('duration', 0))
+                if not gi or not new:
+                    continue
+                old = int(gi['finish']) - int(gi['start'])
+                if old > new and gi['finish'] > now:
+                    remaining = min(old, gi['finish'] - now)
+                    finish = now + math.ceil(new * remaining / old)
+                    e[interval_key] = {'start': finish - new, 'finish': finish}
+            e['progressionEconomyVersion'] = PROGRESSION_VERSION
 
 
 def packages(level):
