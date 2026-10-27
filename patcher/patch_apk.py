@@ -65,6 +65,12 @@ EMULATOR_MIN_FILTERS = (0xc30118, bytes.fromhex('0027000001270000022700000327000
 # `movs r2, #N` -> `movs r2, #6` before each setTextureEnvMode(1, N) call.
 EMULATOR_SAMPLER_PRESETS = [(at, bytes([n, 0x22]), b'\x06\x22')
                             for at, n in ((0xa027aa, 5), (0xa027d8, 2), (0xa027ee, 3), (0xa02804, 4))]
+# sdr::Geometry (only the reef floor's tile map uses it) binds its vertex buffer through a recorded renderer
+# state object when it has one; on the emulator the floor then draws untextured (white). Always take the
+# plain VertexBuffer/IndexBuffer path instead: the branches in bind, unbind and draw.
+EMULATOR_GEOMETRY = [(0x9ab8e0, b'\x0b\xd1', b'\xc0\x46'),   # bind: bne state-object path -> nop
+                     (0x9ab91c, b'\x0b\xd1', b'\xc0\x46'),   # unbind: same
+                     (0x9ab954, b'\x0b\xd0', b'\x0b\xe0')]   # draw: beq plain path -> b
 
 
 # DialogSettings::DialogSettings shows part of the game server's host name: substring(11, indexOf('.') - 11),
@@ -219,7 +225,7 @@ def patch_lib(lib, account_url, game_url, debug_log, emulator):
             sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
         lib[at:at + 2] = new
     if emulator:
-        for at, old, new in [EMULATOR_PATCH, EMULATOR_MIN_FILTERS] + EMULATOR_SAMPLER_PRESETS:
+        for at, old, new in [EMULATOR_PATCH, EMULATOR_MIN_FILTERS] + EMULATOR_SAMPLER_PRESETS + EMULATOR_GEOMETRY:
             if lib[at:at + len(old)] != old:
                 sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
             lib[at:at + len(old)] = new
