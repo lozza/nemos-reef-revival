@@ -4,6 +4,13 @@ An unofficial fan project for playing Nemo's Reef Android 1.8.1 on a server
 you run at home. The project is in early development:
 [what works and what is still missing](STATUS.md).
 
+## Experimental desktop prototype
+
+Windows developer builds of a separate desktop client have been tested;
+Linux remains unverified. No public desktop build or desktop-source snapshot
+is available yet. [Read the desktop prototype guide](https://github.com/lozza/nemos-reef-revival/blob/main/DESKTOP.md)
+for current status, controls, saves and testing access.
+
 ## Start here
 
 **1. Choose where to run the server.** Follow one guide:
