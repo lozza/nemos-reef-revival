@@ -65,12 +65,6 @@ EMULATOR_MIN_FILTERS = (0xc30118, bytes.fromhex('0027000001270000022700000327000
 # `movs r2, #N` -> `movs r2, #6` before each setTextureEnvMode(1, N) call.
 EMULATOR_SAMPLER_PRESETS = [(at, bytes([n, 0x22]), b'\x06\x22')
                             for at, n in ((0xa027aa, 5), (0xa027d8, 2), (0xa027ee, 3), (0xa02804, 4))]
-# sdr::Geometry (only the reef floor's tile map uses it) binds its vertex buffer through a recorded renderer
-# state object when it has one; on the emulator the floor then draws untextured (white). Always take the
-# plain VertexBuffer/IndexBuffer path instead: the branches in bind, unbind and draw.
-EMULATOR_GEOMETRY = [(0x9ab8e0, b'\x0b\xd1', b'\xc0\x46'),   # bind: bne state-object path -> nop
-                     (0x9ab91c, b'\x0b\xd1', b'\xc0\x46'),   # unbind: same
-                     (0x9ab954, b'\x0b\xd0', b'\x0b\xe0')]   # draw: beq plain path -> b
 
 
 # DialogSettings::DialogSettings shows part of the game server's host name: substring(11, indexOf('.') - 11),
@@ -225,7 +219,7 @@ def patch_lib(lib, account_url, game_url, debug_log, emulator):
             sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
         lib[at:at + 2] = new
     if emulator:
-        for at, old, new in [EMULATOR_PATCH, EMULATOR_MIN_FILTERS] + EMULATOR_SAMPLER_PRESETS + EMULATOR_GEOMETRY:
+        for at, old, new in [EMULATOR_PATCH, EMULATOR_MIN_FILTERS] + EMULATOR_SAMPLER_PRESETS:
             if lib[at:at + len(old)] != old:
                 sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
             lib[at:at + len(old)] = new
@@ -234,7 +228,7 @@ def patch_lib(lib, account_url, game_url, debug_log, emulator):
 
 def png_textures(zin, emulator=False):
     """Decodes every PVRTC-only .ddspvr texture to a .png next to it (see pvrtc.py). With emulator, also
-    returns rewritten two-texture materials (see bake_two_texture_materials)."""
+    returns replacement .mat and .meta files (see bake_two_texture_materials, rgba8_metas)."""
     names = set(zin.namelist())
     todo = [n for n in sorted(names) if n.endswith('.ddspvr') and n[:-len('.ddspvr')] + '.png' not in names]
     decoded = {}
@@ -243,7 +237,7 @@ def png_textures(zin, emulator=False):
         print('\rconverting textures for non-PowerVR GPUs: %d/%d' % (i, len(todo)), end='', flush=True)
     if todo:
         print()
-    mats = bake_two_texture_materials(zin, decoded) if emulator else {}
+    mats = {**bake_two_texture_materials(zin, decoded), **rgba8_metas(zin)} if emulator else {}
     return {name: pvrtc.png(*tex) for name, tex in decoded.items()}, mats
 
 
@@ -259,6 +253,21 @@ def read_mat(blob):
         textures.append(blob[at + 2:at + 2 + n].decode())
         at += 4 + n
     return head, textures
+
+
+def rgba8_metas(zin):
+    """Emulators (LDPlayer, the Android Studio emulator) draw large textures white unless they are RGBA8:
+    the reef floor (tiles_new, 1024x1024 RGB8) and the item atlases (fr_items_dynamic*, RGBA4, up to
+    2048x2048), while items_static (1024x1024 RGBA8) is fine. Make every scenery texture's .meta ask for
+    RGBA8 (key 6 = IRenderer::PixelFormat, 2 = RGBA8; see Texture::Meta::load); the engine converts on load."""
+    out = {}
+    for name in zin.namelist():
+        if not (name.startswith('assets/-device_') and name.endswith('.meta')):
+            continue
+        blob = zin.read(name)
+        pairs = [blob[i:i + 2] for i in range(2, len(blob), 2) if blob[i] != 6] + [b'\x06\x02']
+        out[name] = struct.pack('>H', len(pairs)) + b''.join(pairs)
+    return out
 
 
 def bake_two_texture_materials(zin, decoded):

@@ -211,12 +211,15 @@ emulator these still draw white. The textures are decoded correctly, and other c
 every name loaded (stubs in the zero padding at `0xc0e940`, first LOAD segment grown to cover them).
 That log shows neither atlas is ever requested on an empty reef, so the white areas there are something else.
 
-The white areas on the reef are the sand-path tiles of the iso tile map (`tileset_new.itil` →
-`tiles_new.png`; 188 tile graphics of 92x46 px, 246 tiles). `tiles_new.png` loads correctly (RGB8, meta =
-LINEAR min/mag filters) and its texels are not white, so the tiles are drawn untextured. The tile map is
-the only thing drawn from a vertex buffer (`TileSet::buildGeometry`/`Geometry::draw`) through the
-engine's only renderer, `RendererES1`. The emulator's GLES 1.1 translator is the likely cause; this is
-unconfirmed until tested on a real device.
+The white areas on the reef are the sand-path tiles of the iso tile map (`tileset_new.itil` ->
+`tiles_new.png`; 188 tile graphics of 92x46 px, 246 tiles) and sprites on the item atlases. The game's log on
+LDPlayer 9 (GL renderer "Adreno (TM) 750" through the ANDROID_EMU translator, max texture size 16384) lists
+every texture with its format: the ones that draw white are the large non-RGBA8 ones (`tiles_new` 1024x1024
+RGB8, `fr_items_dynamic_02/_04` 2048x2048 RGBA4), while `items_static` (1024x1024 RGBA8) and the RGBA4 fonts
+(up to 512x1024) draw fine. `--emulator` therefore rewrites every `-device_*/*.meta` to ask for RGBA8.
+
+Two-texture fish materials (a white cut-out `_d` on unit 0, the colours in `_lm` multiplied in on unit 1)
+drew black on the emulator; `--emulator` bakes them into one texture.
 
 ## Music
 
