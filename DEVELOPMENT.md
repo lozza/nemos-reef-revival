@@ -6,6 +6,13 @@ Source code and launchers live on the
 [re-notes branch](https://github.com/lozza/nemos-reef-revival/tree/re-notes).
 The default branch provides the public setup guides and Compose files.
 
+## Experimental desktop work
+
+See [the desktop prototype guide](DESKTOP.md) for tested Windows behavior,
+unverified Linux support, developer launch instructions, controls and separate
+saves. Desktop-source snapshots are not published on the current `re-notes`
+branch. The standard server/patcher ZIP is for the Android workflow.
+
 ## Source and tests
 
 The Python server uses the standard library. From a source checkout:
@@ -83,16 +90,18 @@ server base URL short (at most 29 characters); the patcher checks whether it fit
 `10.0.2.2`. Use:
 
 ```sh
-python patcher/patch_apk.py nemo.apk http://10.0.2.2:8080 --debug-log --emulator
+python patcher/patch_apk.py nemo.apk http://10.0.2.2:8080 --debug-log --emulator --music music
 ```
 
 The emulator flag works around a GL-driver query that can otherwise crash
 startup. It is not needed for normal Android devices.
 
-**Optional music:** supply your own tracks named `music0` through `music3`
-with `.mp3` or `.ogg` extensions in a `music` folder. Add `--music music`
-to the patch command. The Windows batch patcher picks that folder up
-automatically. Music files are not provided.
+**Original music — required setup step:** the original APK has no background
+music. Follow [download and file-placement instructions](PATCHING.md#3-download-the-original-music-required)
+before patching, using the linked original soundtrack. The patcher accepts
+`music0` through `music3` in MP3 or Ogg format. Add `--music music` to manual
+commands; the Windows batch patcher detects the folder automatically. Check
+that all four tracks were added. Music files are not supplied by this repo.
 
 ## Economy checks
 

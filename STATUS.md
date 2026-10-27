@@ -8,6 +8,14 @@ is still being reconstructed. Back up your reef before updating.
 For the changes we've made to the original game, see
 [Changes from the original game](CHANGES.md).
 
+## Separate desktop prototype
+
+The [Windows/Linux desktop prototype](DESKTOP.md) is experimental. Original
+Windows gameplay and fullscreen have been checked on developer builds; Linux
+has not been verified. The measured Windows scene runs at roughly 3 FPS, and
+extended desktop gameplay remains unverified. There is no public desktop
+release yet. The features below describe the Android/server project.
+
 ## Implemented
 
 - Login, saved reefs, buying, placing, feeding, moving and collecting.

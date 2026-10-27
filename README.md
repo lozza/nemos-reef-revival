@@ -6,6 +6,13 @@ An unofficial fan project for playing Nemo's Reef Android 1.8.1 on a server
 you run at home. The project is in early development:
 [what works and what is still missing](STATUS.md).
 
+## Experimental desktop prototype
+
+A separate Windows/Linux prototype runs the original game without Android.
+Windows developer builds have been tested, but are still very slow; Linux is
+unverified. No public desktop download or desktop-source snapshot is available
+yet. See [desktop status, controls, setup and saves](DESKTOP.md).
+
 ## Start here
 
 **1. Choose where to run the server.** Follow one guide:
@@ -53,6 +60,7 @@ Captured from the game running on an Android tablet.
 | Fix a setup problem | [Troubleshooting](TROUBLESHOOTING.md) |
 | Understand the current game features | [Game status and playing](STATUS.md) |
 | See economy changes, pearl rewards and example budgets | [Revival economy](ECONOMY.md) |
+| Learn about the experimental Windows/Linux client | [Desktop prototype](DESKTOP.md) |
 | Work on the server or use an emulator | [Development](DEVELOPMENT.md) |
 
 The server computer must stay on while you play. A NAS or mini PC can run it

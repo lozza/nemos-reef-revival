@@ -43,7 +43,56 @@ For Windows, use the PC's IPv4 address.
 The phone must be able to reach that address. Check its `/healthz` page in
 the phone's browser first.
 
-## 3. Make the patched copy
+## 3. Download the original music (required)
+
+The original Android APK does **not** contain the background music. Complete
+this step before patching so the installed game has its original soundtrack.
+
+1. Open [Nemo's Reef — original soundtrack downloads](https://downloads.khinsider.com/game-soundtracks/album/nemos-reef-android-ios-gamerip-2012).
+2. Download the four original tracks, **Music 0** through **Music 3**, as MP3
+   files. Downloading them separately is fine.
+3. Create a folder named **music** inside the project folder, next to
+   `patch-apk.bat` and `nemo.apk`.
+4. Name the files exactly as follows. Keep their real `.mp3` extension;
+   do not name them `music0.mp3.mp3`.
+
+| Original track | Required filename in the music folder |
+|---|---|
+| Music 0 (track 1) | `music0.mp3` |
+| Music 1 (track 2) | `music1.mp3` |
+| Music 2 (track 3) | `music2.mp3` |
+| Music 3 (track 4) | `music3.mp3` |
+
+Your folder should look like this:
+
+```text
+project-folder/
+  nemo.apk
+  patch-apk.bat
+  patcher/
+  music/
+    music0.mp3
+    music1.mp3
+    music2.mp3
+    music3.mp3
+```
+
+The patcher also accepts real Ogg files named `music0.ogg` through
+`music3.ogg`; MP3 downloads do not need conversion. Keep one version of
+each track in the folder, because Ogg files take priority over MP3 files
+with the same number.
+
+The Windows batch patcher picks up this folder automatically. A command-line
+patch must include **`--music music`**, as shown below. Check that the patcher
+prints **`adding 4 music track(s) from music`** before installing the result.
+If fewer tracks are found, fix the filenames and rebuild the patched APK.
+
+Adding files to the folder after patching does not update an already-built
+APK. The tracks are packed into the patched game on the patching PC; they
+do not need to be installed on the Docker host. Music downloads are separate
+from this repository and do not include the game APK.
+
+## 4. Make the patched copy
 
 **If your server uses port 8080:** double-click **patch-apk.bat**, enter just
 the IP address (for example `192.168.1.20`) and press Enter.
@@ -52,7 +101,7 @@ the IP address (for example `192.168.1.20`) and press Enter.
 run this, replacing the whole example address with yours:
 
 ```bat
-python patcher/patch_apk.py nemo.apk http://192.168.1.20:8081 --debug-log
+python patcher/patch_apk.py nemo.apk http://192.168.1.20:8081 --debug-log --music music
 ```
 
 Wait for `wrote signed nemo-private.apk`. Texture conversion can take a minute.
@@ -60,7 +109,7 @@ If it says **UNSIGNED**, fix the Java/signing-tool setup and run it again.
 
 Keep the original `nemo.apk`. Docker continues to use that original file.
 
-## 4. Install and play
+## 5. Install and play
 
 Copy **nemo-private.apk** to your Android device, open it in Files/Downloads,
 and choose **Install**. If prompted, allow that file app to install unknown apps.
@@ -83,5 +132,5 @@ and [save protection](SAVES.md).
 If the server IP or port changes, patch the original APK again with the new
 address and install the updated copy.
 
-[Emulator and optional music](DEVELOPMENT.md#patcher-options) ·
+[Emulator and music options](DEVELOPMENT.md#patcher-options) ·
 [Connection problems](TROUBLESHOOTING.md#the-game-cannot-connect)
