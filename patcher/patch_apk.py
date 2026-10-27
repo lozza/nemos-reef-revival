@@ -55,6 +55,11 @@ TRACE_CAVE = 0xc0e940      # zero padding past the end of the first LOAD segment
 # the answer; the Android emulator's GLES 1 layer returns garbage there and the game aborts with
 # "vector::reserve". Replace `blx glGetIntegerv` (r1 = &result) with `movs r0, #32; str r0, [r1]`.
 EMULATOR_PATCH = (0xa036ee, bytes.fromhex('44f164ec'), bytes.fromhex('20200860'))
+# RendererES1::setTextureMinFilter maps the engine's filter modes through this GLenum table (NEAREST, LINEAR,
+# then the four *_MIPMAP_* modes). Emulators' GLES 1 layers (LDPlayer) do not build the mipmaps
+# (GL_GENERATE_MIPMAP), so those textures are incomplete and draw black; use NEAREST/LINEAR instead.
+EMULATOR_MIN_FILTERS = (0xc30118, bytes.fromhex('00270000012700000227000003270000'),
+                        bytes.fromhex('00260000012600000026000001260000'))
 
 
 # DialogSettings::DialogSettings shows part of the game server's host name: substring(11, indexOf('.') - 11),
@@ -209,10 +214,10 @@ def patch_lib(lib, account_url, game_url, debug_log, emulator):
             sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
         lib[at:at + 2] = new
     if emulator:
-        at, old, new = EMULATOR_PATCH
-        if lib[at:at + 4] != old:
-            sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
-        lib[at:at + 4] = new
+        for at, old, new in (EMULATOR_PATCH, EMULATOR_MIN_FILTERS):
+            if lib[at:at + len(old)] != old:
+                sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
+            lib[at:at + len(old)] = new
     return bytes(lib)
 
 
