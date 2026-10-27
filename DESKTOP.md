@@ -9,6 +9,9 @@ using a compatibility layer and ARM emulation. Android, an Android emulator,
 and a Java runtime are not used by the desktop client. It is still early
 development and is not a finished native Windows/Linux port.
 
+The [website countdown](https://nemos-reef-revival.pages.dev/) is counting down
+to the Windows version. It does not announce a verified Linux release.
+
 ## Availability and platform status
 
 | Platform | Current status |

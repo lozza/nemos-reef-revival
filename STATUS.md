@@ -16,6 +16,9 @@ has not been verified. The measured Windows scene runs at roughly 3 FPS, and
 extended desktop gameplay remains unverified. There is no public desktop
 release yet. The features below describe the Android/server project.
 
+The [website countdown](https://nemos-reef-revival.pages.dev/) is counting down
+to the Windows version. It does not announce a verified Linux release.
+
 ## Implemented
 
 - Login, saved reefs, buying, placing, feeding, moving and collecting.

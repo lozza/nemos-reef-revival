@@ -13,6 +13,9 @@ Windows developer builds have been tested, but are still very slow; Linux is
 unverified. No public desktop download or desktop-source snapshot is available
 yet. See [desktop status, controls, setup and saves](DESKTOP.md).
 
+The [website countdown](https://nemos-reef-revival.pages.dev/) is counting down
+to the Windows version. It does not announce a verified Linux release.
+
 ## Start here
 
 **1. Choose where to run the server.** Follow one guide:
