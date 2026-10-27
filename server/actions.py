@@ -23,7 +23,9 @@ BUILT, CONSTRUCTING = 1, 0
 GROWING, WAITING_FEED, PRODUCING, READY = 3, 5, 6, 7
 END_CONSTRUCT, END_FEED = 3, 4  # pushed message types
 GROWABLE = ('ET_CORAL', 'ET_LIVING_PLANT', 'ET_ORN_PLANT', 'ET_RARE_PLANT')
-HARVESTABLE = ('ET_CORAL', 'ET_LIVING_PLANT', 'ET_RARE_PLANT')
+# Rare plants use the client's EntityOrnPlant too: they have no Harvestable
+# component. A producingInterval in their final-feed reply dereferences null.
+HARVESTABLE = ('ET_CORAL', 'ET_LIVING_PLANT')
 
 
 class ActionRejected(Exception):
@@ -160,6 +162,12 @@ class Reef:
         _, p = self.protos.get(e.get('prototypeId'))
         etype = (p or {}).get('type')
         st = e.get('state')
+        if etype in ('ET_ORN_PLANT', 'ET_RARE_PLANT') and st in (PRODUCING, READY):
+            # Older saves treated mature rare plants as zero-time producers.
+            # Keep their identity, seed provenance and paid growth progress.
+            e['state'] = BUILT
+            e.pop('producingInterval', None)
+            return
         if st == CONSTRUCTING and (etype != 'ET_SPEC_HOUSE' or e.get('constructionInterval', {}).get('finish', 0) <= now):
             e['state'] = BUILT
             e.pop('constructionInterval', None)
@@ -615,4 +623,3 @@ class Reef:
         if d.get('reward'):
             self.earn(w, d['reward'])
         return {'questFinished': bool(d.get('finished'))}
-
