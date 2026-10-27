@@ -44,6 +44,7 @@ class ProgressionTest(unittest.TestCase):
                 if not it.get('produce'):
                     continue
                 before, after = old['producingTime']['duration'], p['producingTime']['duration']
+                self.assertEqual(p['producingTime']['timeWarp'], old['producingTime']['timeWarp'])
                 self.assertLessEqual(after, 14400000)
                 self.assertLessEqual(p['producedReward']['xp'] * before,
                                      old['producedReward']['xp'] * after)
@@ -51,6 +52,14 @@ class ProgressionTest(unittest.TestCase):
                     self.assertGreaterEqual(p['producedReward'][currency], old['producedReward'][currency])
                 changed += p['producedReward'] != old['producedReward']
         self.assertGreater(changed, 25)
+
+    def test_production_override_preserves_native_time_metadata(self):
+        p = {'id': 'coral_trial', 'growingCycles': 3,
+             'growingCycleCost': {'energy': 30}, 'growingTime': {'duration': 1000, 'timeWarp': 0},
+             'producedReward': {'energy': 10, 'xp': 6},
+             'producingTime': {'duration': 28800000, 'timeWarp': 7}}
+        economy.balance_prototype(p, {'price': {'virtualMoney': 100}, 'level': 10}, 'revival')
+        self.assertEqual(p['producingTime'], {'duration': 14400000, 'timeWarp': 7})
 
     def test_representative_values_are_worthwhile_without_constant_tapping(self):
         expected = {'coral_bell_blue': (30, 3600000, 20),

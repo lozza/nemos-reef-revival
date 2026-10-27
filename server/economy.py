@@ -101,7 +101,10 @@ def balance_prototype(p, item, profile):
     # Never multiply XP/hour merely by shortening a timer. Integer rounding
     # goes down; XP remains unchanged when only currency output changes.
     r['xp'] = int(r.get('xp', 0)) * new_ms // old_ms
-    p['producingTime'] = {'duration': new_ms}
+    # ServerPrototype::getTime reads timeWarp as well as duration. Replacing
+    # the object with only duration throws during the client's harvest flow,
+    # which can also interrupt its touch-release cleanup and cause false zoom.
+    p['producingTime'] = dict(p['producingTime'], duration=new_ms)
 
 
 def level_reward(level, original, profile):
