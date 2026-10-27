@@ -60,6 +60,11 @@ EMULATOR_PATCH = (0xa036ee, bytes.fromhex('44f164ec'), bytes.fromhex('20200860')
 # (GL_GENERATE_MIPMAP), so those textures are incomplete and draw black; use NEAREST/LINEAR instead.
 EMULATOR_MIN_FILTERS = (0xc30118, bytes.fromhex('00270000012700000227000003270000'),
                         bytes.fromhex('00260000012600000026000001260000'))
+# RendererGLTextureFixed::setSamplerStates: presets 2-5 blend a second texture in on unit 1 (the reef floor
+# uses preset 5), which the emulator samples as black. Set unit 1 to mode 6 (pass the colour through) instead:
+# `movs r2, #N` -> `movs r2, #6` before each setTextureEnvMode(1, N) call.
+EMULATOR_SAMPLER_PRESETS = [(at, bytes([n, 0x22]), b'\x06\x22')
+                            for at, n in ((0xa027aa, 5), (0xa027d8, 2), (0xa027ee, 3), (0xa02804, 4))]
 
 
 # DialogSettings::DialogSettings shows part of the game server's host name: substring(11, indexOf('.') - 11),
@@ -214,25 +219,69 @@ def patch_lib(lib, account_url, game_url, debug_log, emulator):
             sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
         lib[at:at + 2] = new
     if emulator:
-        for at, old, new in (EMULATOR_PATCH, EMULATOR_MIN_FILTERS):
+        for at, old, new in [EMULATOR_PATCH, EMULATOR_MIN_FILTERS] + EMULATOR_SAMPLER_PRESETS:
             if lib[at:at + len(old)] != old:
                 sys.exit('unexpected bytes at %#x; is this the 1.8.1 APK?' % at)
             lib[at:at + len(old)] = new
     return bytes(lib)
 
 
-def png_textures(zin):
-    """Decodes every PVRTC-only .ddspvr texture to a .png next to it (see pvrtc.py)."""
+def png_textures(zin, emulator=False):
+    """Decodes every PVRTC-only .ddspvr texture to a .png next to it (see pvrtc.py). With emulator, also
+    returns rewritten two-texture materials (see bake_two_texture_materials)."""
     names = set(zin.namelist())
     todo = [n for n in sorted(names) if n.endswith('.ddspvr') and n[:-len('.ddspvr')] + '.png' not in names]
-    out = {}
+    decoded = {}
     for i, name in enumerate(todo, 1):
-        w, h, rgba, alpha = pvrtc.ddspvr_to_rgba(zin.read(name))
-        out[name[:-len('.ddspvr')] + '.png'] = pvrtc.png(w, h, rgba, alpha)
+        decoded[name[:-len('.ddspvr')] + '.png'] = pvrtc.ddspvr_to_rgba(zin.read(name))
         print('\rconverting textures for non-PowerVR GPUs: %d/%d' % (i, len(todo)), end='', flush=True)
     if todo:
         print()
-    return out
+    mats = bake_two_texture_materials(zin, decoded) if emulator else {}
+    return {name: pvrtc.png(*tex) for name, tex in decoded.items()}, mats
+
+
+def read_mat(blob):
+    """A .mat file: u16 property count, that many (id, value) byte pairs, u16 texture count, then per texture
+    a u16 length, the file name and a u16 (always 0). Big-endian. Returns (header bytes, texture names)."""
+    at = 2 + 2 * struct.unpack_from('>H', blob)[0]
+    head, count = blob[:at], struct.unpack_from('>H', blob, at)[0]
+    at += 2
+    textures = []
+    for _ in range(count):
+        n = struct.unpack_from('>H', blob, at)[0]
+        textures.append(blob[at + 2:at + 2 + n].decode())
+        at += 4 + n
+    return head, textures
+
+
+def bake_two_texture_materials(zin, decoded):
+    """Fish such as the bicolor or emperor angelfish are drawn with two textures: X_d.png (a white cut-out
+    mask) on texture unit 0 and X_lm.png (the colours) multiplied in on unit 1. Emulators' GLES 1 layers
+    (LDPlayer) sample unit 1 as black, so those fish come out as black silhouettes. Bake the mask into the
+    _lm texture (colour = lm * d, alpha = d) and make the material use just that one texture."""
+    mats, baked = {}, set()
+    for name in sorted(n for n in zin.namelist() if n.startswith('assets/') and n.endswith('.mat')):
+        head, textures = read_mat(zin.read(name))
+        if len(textures) != 2:
+            continue
+        for folder in sorted({n.rsplit('/', 1)[0] for n in decoded}):
+            d, lm = decoded.get(folder + '/' + textures[0]), decoded.get(folder + '/' + textures[1])
+            if not d or not lm or folder + '/' + textures[1] in baked:
+                continue
+            baked.add(folder + '/' + textures[1])
+            (dw, dh, drgba, _), (w, h, lrgba, _) = d, lm
+            out = bytearray(lrgba)
+            for y in range(h):
+                for x in range(w):
+                    i, j = 4 * (y * w + x), 4 * ((y * dh // h) * dw + x * dw // w)
+                    for c in range(3):
+                        out[i + c] = lrgba[i + c] * drgba[j + c] // 255
+                    out[i + 3] = drgba[j + 3]
+            decoded[folder + '/' + textures[1]] = (w, h, bytes(out), True)
+        lm = textures[1].encode()
+        mats[name] = head + struct.pack('>HH', 1, len(lm)) + lm + b'\0\0'
+    return mats
 
 
 def music_files(music_dir):
@@ -253,18 +302,19 @@ def music_files(music_dir):
     return out
 
 
-def rebuild(apk_in, apk_out, lib, dex, music=None, manifest=None):
+def rebuild(apk_in, apk_out, lib, dex, music=None, manifest=None, emulator=False):
     with zipfile.ZipFile(apk_in) as zin, zipfile.ZipFile(apk_out, 'w') as zout:
         names = set(zin.namelist())
         for name, data in (music or {}).items():
             if name not in names:
                 zout.writestr(zipfile.ZipInfo(name, date_time=(2015, 8, 28, 20, 56, 0)), data, compress_type=zipfile.ZIP_STORED)
-        for name, data in png_textures(zin).items():
+        pngs, mats = png_textures(zin, emulator)
+        for name, data in pngs.items():
             zout.writestr(zipfile.ZipInfo(name, date_time=(2015, 8, 28, 20, 56, 0)), data, compress_type=zipfile.ZIP_STORED)
         for info in zin.infolist():
             if info.filename.startswith('META-INF/') and info.filename.rsplit('.', 1)[-1] in ('SF', 'RSA', 'DSA', 'MF', 'EC'):
                 continue  # old signature
-            data = {LIB: lib, DEX: dex, MANIFEST: manifest}.get(info.filename) or zin.read(info.filename)
+            data = {LIB: lib, DEX: dex, MANIFEST: manifest, **mats}.get(info.filename) or zin.read(info.filename)
             if info.filename.startswith(OLD_ABI):
                 info = copy_info(info, NEW_ABI + info.filename[len(OLD_ABI):])
             zout.writestr(info, data, compress_type=info.compress_type)
@@ -321,7 +371,7 @@ def main():
         dex = patch_dex(z.read(DEX))
     with zipfile.ZipFile(args.apk) as z:
         manifest = patch_target_sdk(z.read(MANIFEST)) if args.modern_android else None
-    rebuild(args.apk, out, lib, dex, music_files(args.music), manifest)
+    rebuild(args.apk, out, lib, dex, music_files(args.music), manifest, args.emulator)
     print('account API -> %s\ngame API    -> %s' % (account_url, game_url))
     if sign(out, signer):
         print('wrote signed %s' % out)
