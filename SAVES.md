@@ -129,3 +129,16 @@ Back up first.
 
 Ordinary server updates do not require patching the APK again unless the
 server address changes or the update specifically requires a client change.
+
+## Play the same reef on another device
+
+Each device starts as its own player. To play an existing reef on a second
+device (an emulator, a new tablet), start the game there once and pick any
+name, for example `lozzareeves2`. Then, where the server runs:
+
+- Docker: `docker exec <container> python server/link_device.py lozzareeves2 lozzareeves`
+- Windows: in the project folder, `python server\link_device.py lozzareeves2 lozzareeves`
+
+The second device then plays `lozzareeves`, and the spare `lozzareeves2`
+player and its reef are deleted. Close and reopen the game on that device.
+Run the tool without names to list the players.

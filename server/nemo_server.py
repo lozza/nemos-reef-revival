@@ -61,11 +61,15 @@ class Store:
                 uid TEXT PRIMARY KEY, udid TEXT UNIQUE, name TEXT, secret TEXT, created INTEGER);
             CREATE TABLE IF NOT EXISTS worlds (uid TEXT PRIMARY KEY, world TEXT);
             CREATE TABLE IF NOT EXISTS friends (uid TEXT, friend TEXT, PRIMARY KEY (uid, friend));
+            -- further devices linked to a player (link_device.py); a player's first device is users.udid
+            CREATE TABLE IF NOT EXISTS devices (udid TEXT PRIMARY KEY, uid TEXT);
         ''')
 
     def user_by_udid(self, udid):
         with self.lock:
-            r = self.db.execute('SELECT uid, name, secret FROM users WHERE udid=?', (udid,)).fetchone()
+            r = self.db.execute('SELECT users.uid, name, secret FROM devices JOIN users ON users.uid = devices.uid '
+                                'WHERE devices.udid=?', (udid,)).fetchone() or \
+                self.db.execute('SELECT uid, name, secret FROM users WHERE udid=?', (udid,)).fetchone()
         return r and {'uid': r[0], 'name': r[1], 'secret': r[2]}
 
     def user(self, uid):
@@ -214,6 +218,7 @@ class Game:
                 self.store.db.execute('DELETE FROM worlds')
                 self.store.db.execute('DELETE FROM users')
                 self.store.db.execute('DELETE FROM friends')
+                self.store.db.execute('DELETE FROM devices')
             print('everything reset: every device is a new player again (asked for a name)')
         if args.reset_worlds:
             with self.store.lock, self.store.db:
