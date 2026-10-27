@@ -34,6 +34,16 @@ Existing players need the latest APK patch to use the exchange.
 See [Changes from the original game](CHANGES.md) for the full list, including
 event schedules and compatibility fixes.
 
+## Screenshots
+
+Captured from the game running on an Android tablet.
+
+![A level 12 reef with corals, plants and fish](docs/screenshots/reef-overview.png)
+
+| Nursery | Sand dollars to algae |
+|---|---|
+| ![Plants available in the nursery](docs/screenshots/nursery.png) | ![Algae packs bought with sand dollars](docs/screenshots/algae-exchange.png) |
+
 ## Other guides
 
 | I want to… | Guide |
