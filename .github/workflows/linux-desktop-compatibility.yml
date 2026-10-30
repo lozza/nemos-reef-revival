@@ -1,0 +1,64 @@
+name: Verify general Linux desktop runtime
+on:
+  push:
+    branches: ['build/linux-compatibility-20261030']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compatibility:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download the tested Ubuntu 22.04 native runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: NemosReef-Linux-x86_64-runtime
+          run-id: 41127783069
+          github-token: ${{ github.token }}
+          path: download
+      - name: Prepare general desktop compatibility
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libgl1-mesa-dri libglfw3 xvfb xauth
+          echo '9dfc58ea4fcb0fca4c75513469d65d613604d13f1587429da27d752d3a093647  download/NemosReef-Linux-x86_64-runtime.tar.gz' | sha256sum -c
+          mkdir runtime
+          tar -C runtime -xzf download/NemosReef-Linux-x86_64-runtime.tar.gz
+          rm -f runtime/NemosReef/_internal/libstdc++.so.6 runtime/NemosReef/_internal/libgcc_s.so.1
+          cp desktop/LINUX-TEST.md 'runtime/NemosReef/START HERE.txt'
+      - name: Check packaged engine, graphics, dialogs and audio decode
+        env:
+          NEMO_DESKTOP_HOME: ${{ github.workspace }}/private-self-test
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          test ! -e runtime/NemosReef/nemo.apk
+          runtime/NemosReef/NemosReef --help
+          xvfb-run -a runtime/NemosReef/NemosReef --self-test
+          cp private-self-test/work/platform-self-test.json runtime/NemosReef/
+      - name: Package verified portable runtime
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('runtime/NemosReef/linux-build-info.json')
+          info=json.loads(p.read_text())
+          info['uses_system_cpp_runtime']=True
+          p.write_text(json.dumps(info,indent=2))
+          PY
+          tar -C runtime -czf NemosReef-Linux-x86_64-runtime.tar.gz NemosReef
+          sha256sum NemosReef-Linux-x86_64-runtime.tar.gz > linux-runtime.sha256
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-22.04'
+        with:
+          name: NemosReef-Linux-x86_64-runtime-compatible
+          path: |
+            NemosReef-Linux-x86_64-runtime.tar.gz
+            linux-runtime.sha256
+          retention-days: 14
+

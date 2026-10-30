@@ -36,6 +36,10 @@ def main():
     options += [str(HERE/'portable.py')]
     run(options)
     bundle = HERE/'linux-dist/NemosReef'
+    # Use the desktop's C++ runtime alongside its own graphics driver. An
+    # older bundled libstdc++ can prevent newer system DRI drivers loading.
+    for name in ('libstdc++.so.6','libgcc_s.so.1'):
+        (bundle/'_internal'/name).unlink(missing_ok=True)
     shutil.copy2(HERE/'LINUX-TEST.md',bundle/'START HERE.txt')
     shutil.copy2(HERE/'linux-launch.sh',bundle/'Play Nemos Reef.sh')
     (bundle/'Play Nemos Reef.sh').chmod(0o755)
@@ -54,9 +58,11 @@ def main():
     libraries = {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in (bundle/'_internal/native').glob('*.so')}
     (bundle/'linux-build-info.json').write_text(json.dumps({'platform':platform.platform(),
         'python':sys.version,'native_libraries':libraries,'game_assets_included':False,
+        'uses_system_cpp_runtime':True,
         'scope':'Linux x86_64 experimental test; original-game gameplay not verified in CI'},indent=2))
     subprocess.run(['tar','-C',str(bundle.parent),'-czf',str(HERE/'NemosReef-Linux-x86_64-runtime.tar.gz'),bundle.name],check=True)
 
 
 if __name__ == '__main__':
     main()
+
