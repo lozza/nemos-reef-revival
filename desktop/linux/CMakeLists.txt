@@ -39,7 +39,9 @@ set(NEMO_NATIVE ${CMAKE_CURRENT_SOURCE_DIR}/../native)
 set(NEMO_LINK_FLAGS -Wl,--no-undefined -Wl,-z,noexecstack)
 
 add_library(jit_core SHARED jit_core.cpp)
-target_include_directories(jit_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(jit_core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    ${DYNARMIC_SOURCE_DIR}/externals/mcl/include
+    ${DYNARMIC_SOURCE_DIR}/externals/fmt/include)
 target_link_libraries(jit_core PRIVATE dynarmic Threads::Threads)
 # Keep Dynarmic/fmt/zydis symbols private; only dp_* (DP_API) are exported.
 target_link_options(jit_core PRIVATE ${NEMO_LINK_FLAGS} -Wl,--exclude-libs,ALL)
@@ -64,3 +66,4 @@ target_link_options(nemo_bridge PRIVATE ${NEMO_LINK_FLAGS})
 install(TARGETS jit_core jit_dispatch_v7 nemo_bridge
         LIBRARY DESTINATION ${NEMO_LINUX_INSTALL_DIR}
         RUNTIME DESTINATION ${NEMO_LINUX_INSTALL_DIR})
+

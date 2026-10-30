@@ -28,7 +28,7 @@ jobs:
       - name: Build the Linux native engine and bridge
         run: |
           cmake -S desktop/linux -B build/linux-native -G Ninja -DCMAKE_BUILD_TYPE=Release -DDYNARMIC_SOURCE_DIR="$PWD/build/dynarmic"
-          cmake --build build/linux-native -j2
+          cmake --build build/linux-native -j4
           cmake --install build/linux-native --prefix "$PWD/desktop/linux"
       - name: Test synthetic native engine contracts
         run: NEMO_LINUX_NATIVE_DIR="$PWD/desktop/linux/lib" python desktop/linux/test_linux_native.py -v
@@ -52,3 +52,4 @@ jobs:
             desktop/NemosReef-Linux-x86_64-runtime.tar.gz
             desktop/linux-runtime.sha256
           retention-days: 14
+
