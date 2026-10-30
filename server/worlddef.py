@@ -220,10 +220,14 @@ def build(apk_path, story=None):
             'getItEarlyBonusAlgaeAmount': GET_IT_EARLY_ALGAE,  # "... plus N FREE algae"
             'dailyTapRewardsCount': DAILY_TAPS,  # daily reward: hidden plants the player may tap per day
             'dailyTapRewardsGetEverythingCostPearls': 5,
-            # DailyRewardManager::checkDailyRewards: while taps are left the dialog comes back every
-            # dailyRewardDisplayDelay minutes, at most dailyRewardDisplayDelayWithdraw times a session
+            # DailyRewardManager uses TWO delays in minutes: before/after all picks are spent.
+            # Withdraw is not a repeat count. Its old value of 1 caused a one-minute nag after
+            # claiming, because the client's login-ready flag stays true until its next resume.
+            # DisplayCount is the actual presentation cap (per client process, not per day).
+            # Keep unused picks available on reconnect, without repeatedly interrupting play.
             'dailyRewardDisplayDelay': 240,
-            'dailyRewardDisplayDelayWithdraw': 1,
+            'dailyRewardDisplayDelayWithdraw': 240,
+            'dailyRewardDisplayCount': 1,
             'squirtIntervalTime': SQUIRT_INTERVAL,  # seconds between two games of Hide and Seek
             # GameScreen::popUpBuyRareSeed ("It has been a while since we have attracted our last Rare
             # Fish..."): at most once a level, from lowVitality_minLevel, once the level is more than
