@@ -101,3 +101,28 @@ It never expires, has no use limit and sends new members to the welcome channel.
 
 To replace it, update the four Discord links in `public/index.html`.
 Existing invites can be managed in Discord under **Server Settings → Invites**.
+
+
+## Google Search appearance
+
+The public countdown and main page both declare the site name as **Nemo's
+Reef Revival** using WebSite microdata and `og:site_name`. Microdata works
+with the existing strict Content Security Policy without inline scripts.
+Both use the canonical homepage URL on pages.dev, including when served by
+the legacy Workers address or an alternate HTML route.
+
+The countdown title announces the 5 December launch and the description
+explains the Windows/Linux fan revival. The visible note supports the same
+facts. The main page has its own evergreen title and description.
+
+`public/favicon-96.png` is a 96x96 PNG export of the existing Discord mascot;
+`public/apple-touch-icon.png` is the 180x180 export. Keep the favicon URL
+stable so crawlers can associate it with the site. These and `robots.txt`
+and `sitemap.xml` are public assets allowed through the pre-launch gate.
+The sitemap lists only the canonical public homepage; owner preview remains
+password-protected and noindexed.
+
+Run `node --test tests/website-*.mjs` after changing metadata or crawl routes.
+After publishing, inspect the homepage in Google Search Console and request
+indexing from a verified property. Google chooses the final site name,
+title, description and favicon; updates can take days or weeks to appear.

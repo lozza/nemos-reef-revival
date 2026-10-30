@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /owner
+
+Sitemap: https://nemos-reef-revival.pages.dev/sitemap.xml
