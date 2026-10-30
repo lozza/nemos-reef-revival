@@ -80,7 +80,11 @@ class DailyRewardProtocolTest(unittest.TestCase):
                 self.game = self.open_game()
                 self.assertFalse(self.call('startgame', desktop=desktop)['resumeGame']['dailyTapRewardReady'])
                 response = self.claim(4, desktop)
-                self.assertEqual(response['reactions'][0]['resultCode'], 409)
+                # Published Android server uses403; desktop rejects stale picks
+                # earlier with409. Both must reject without awarding anything.
+                reaction = response['reactions'][0]
+                self.assertIn(reaction['resultCode'], (403, 409))
+                self.assertNotIn('reward', reaction.get('data', {}))
                 for field in ('virtualMoney', 'energy', 'hardMoney', 'tapRewardsCount'):
                     self.assertEqual(response['status'][field], before[field])
 
