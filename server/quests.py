@@ -720,3 +720,4 @@ class NoStory(Story):
         self.data = {'quests': [], 'dialogs': [], 'hints': [], 'patterns': []}
         self.quests = {}
         self.renamed = {}
+

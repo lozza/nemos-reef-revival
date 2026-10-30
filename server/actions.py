@@ -209,6 +209,10 @@ class Reef:
         name = action.get('action')
         d = action.get('data') or {}
         r = {'aid': action.get('aid'), 'resultCode': 200}
+        if name == 'dailyTapReward' and self.daily_taps_left(w) == 0:
+            # An empty successful reward takes the client's missing-plant path.
+            # A rejected simple action is handled before its reward listener.
+            return dict(r, resultCode=409)
         handler = getattr(self, 'a_' + str(name), None)
         if handler:
             try:
@@ -532,7 +536,12 @@ class Reef:
         st['tapRewardsGetAllAvail'] = False
 
     def a_dailyTapReward(self, w, d, now):
-        """One tap: DialogDailyReward::processResponse shows data.reward on the tapped plant."""
+        """One tap: DialogDailyReward::processResponse shows data.reward on the tapped plant.
+
+        DailyTapItem::showReward (F:965524) shows the first positive one of virtualMoney, hardMoney,
+        energy, lowTool, highTool; xp is never looked at. With none of them it shows the plant
+        data.seedEntityReward.seedPrototypeId instead, and without a seed that is the prototype "",
+        a null ServerPrototype in createPlantView (getIsoPrototype F:38d0ac). So xp is no tap reward."""
         self.new_day(w)
         st = w['status']
         reward = {}
@@ -623,3 +632,4 @@ class Reef:
         if d.get('reward'):
             self.earn(w, d['reward'])
         return {'questFinished': bool(d.get('finished'))}
+

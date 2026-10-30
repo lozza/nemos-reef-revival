@@ -47,7 +47,7 @@ class DailyRewardTest(unittest.TestCase):
         self.assertFalse(nemo_server.user_info(self.world)['resumeGame']['dailyTapRewardReady'])
         before = copy.deepcopy(self.world)
         response = self.claim()
-        self.assertEqual(response['resultCode'], 403)
+        self.assertEqual(response['resultCode'], 409)
         self.assertNotIn('reward', response.get('data', {}))
         self.assertEqual(self.world, before)
 
@@ -66,3 +66,4 @@ class DailyRewardTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

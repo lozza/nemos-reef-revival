@@ -1,0 +1,87 @@
+name: Build Linux desktop test
+on:
+  push:
+    branches: ['build/desktop-gameplay-parity-20261030']
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux build and display dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ninja-build libboost-dev python3-tk libgl1-mesa-dri libglfw3 xvfb xauth libasound2
+          python -m pip install -r desktop/requirements-graphics.txt -r desktop/requirements-build.txt
+      - name: Verify shared server regressions
+        run: python -m unittest discover -s tests -v
+      - name: Fetch the reviewed Dynarmic revision
+        run: |
+          git init build/dynarmic
+          git -C build/dynarmic remote add origin https://github.com/lioncash/dynarmic.git
+          git -C build/dynarmic fetch --depth=1 origin a41c380246d3d9f9874f0f792d234dc0cc17c180
+          git -C build/dynarmic checkout --detach FETCH_HEAD
+          test "$(git -C build/dynarmic rev-parse HEAD)" = a41c380246d3d9f9874f0f792d234dc0cc17c180
+      - name: Build the Linux native engine and bridge
+        run: |
+          cmake -S desktop/linux -B build/linux-native -G Ninja -DCMAKE_BUILD_TYPE=Release -DDYNARMIC_SOURCE_DIR="$PWD/build/dynarmic"
+          cmake --build build/linux-native -j4
+          cmake --install build/linux-native --prefix "$PWD/desktop/linux"
+      - name: Test synthetic native engine contracts
+        run: NEMO_LINUX_NATIVE_DIR="$PWD/desktop/linux/lib" python desktop/linux/test_linux_native.py -v
+      - name: Build the portable app without game assets
+        run: python desktop/build_linux_portable.py
+      - name: Verify packaged runtime without game assets
+        env:
+          NEMO_DESKTOP_HOME: ${{ github.workspace }}/build/private-self-test
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          test ! -e desktop/linux-dist/NemosReef/nemo.apk
+          desktop/linux-dist/NemosReef/NemosReef --help
+          xvfb-run -a desktop/linux-dist/NemosReef/NemosReef --self-test
+          cp build/private-self-test/work/platform-self-test.json desktop/linux-dist/NemosReef/
+          tar -C desktop/linux-dist -czf desktop/NemosReef-Linux-x86_64-runtime.tar.gz NemosReef
+          sha256sum desktop/NemosReef-Linux-x86_64-runtime.tar.gz > desktop/linux-runtime.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NemosReef-Linux-x86_64-runtime
+          path: |
+            desktop/NemosReef-Linux-x86_64-runtime.tar.gz
+            desktop/linux-runtime.sha256
+          retention-days: 14
+
+
+  compatibility:
+    needs: linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: NemosReef-Linux-x86_64-runtime
+          path: runtime
+      - name: Install display and audio runtime dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libgl1-mesa-dri libglfw3 xvfb xauth libasound2t64
+      - name: Verify the same portable runtime on Ubuntu 24.04
+        env:
+          NEMO_DESKTOP_HOME: ${{ github.workspace }}/compatibility-self-test
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          tar -xzf runtime/NemosReef-Linux-x86_64-runtime.tar.gz
+          test ! -e NemosReef/nemo.apk
+          test ! -e NemosReef/_internal/libstdc++.so.6
+          test ! -e NemosReef/_internal/libgcc_s.so.1
+          NemosReef/NemosReef --help
+          xvfb-run -a NemosReef/NemosReef --self-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Linux-Ubuntu24-gameplay-self-test
+          path: compatibility-self-test/work/platform-self-test.json
+

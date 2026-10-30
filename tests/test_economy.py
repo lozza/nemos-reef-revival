@@ -180,24 +180,24 @@ class EconomyIntegrationTest(unittest.TestCase):
     def test_level_catalogue_versions_are_stable_and_contain_correct_offers(self):
         version = self.request('getcurrentworldversion')['worldVersion']
         self.assertEqual(self.request('getcurrentworldversion')['worldVersion'], version)
-        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': version})[0]))
+        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': version})[0]).rstrip(b'\0'))
         self.assertEqual(wd['exchangePackagePrototypes'], economy.packages(10))
         self.world['status']['level'] = 20
         self.game.store.save_world(self.uid, self.world)
         higher = self.request('getcurrentworldversion')['worldVersion']
         self.assertNotEqual(higher, version)
-        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': higher})[0]))
+        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': higher})[0]).rstrip(b'\0'))
         self.assertEqual(wd['exchangePackagePrototypes'], economy.packages(20))
         self.world['status']['level'] = 5
         self.game.store.save_world(self.uid, self.world)
         low = self.request('getcurrentworldversion')['worldVersion']
-        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': low})[0]))
+        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': low})[0]).rstrip(b'\0'))
         self.assertEqual(wd['exchangePackagePrototypes'], [])
 
     def test_older_apks_do_not_receive_unusable_offers_or_make_exchanges(self):
         raw, _ = self.game.game('getcurrentworldversion', {'uid': self.uid})
         version = json.loads(raw)['worldVersion']
-        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': version})[0]))
+        wd = json.loads(nemo_server.xor(self.game.game('getdaworld', {'worldVersion': version})[0]).rstrip(b'\0'))
         self.assertEqual(wd['exchangePackagePrototypes'], [])
         before = copy.deepcopy(self.world)
         result = self.game.reaction(self.world, {'action': 'exchangeMoney', 'aid': 0,
@@ -253,3 +253,4 @@ class EconomyIntegrationTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
