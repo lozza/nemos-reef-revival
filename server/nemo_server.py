@@ -454,6 +454,10 @@ class Game:
 
     def reaction(self, w, action, stamp=None, exchange_client=False):
         if action.get('action') == 'resumeGame':
+            if w is not None:
+                # Availability and the status sent beside it must describe the same day.
+                # A running client may resume after midnight without another startgame.
+                self.reef.new_day(w)
             return {'aid': action.get('aid'), 'resultCode': 200, 'data': user_info(w)}
         if w is None:
             return {'aid': action.get('aid'), 'resultCode': 200}
