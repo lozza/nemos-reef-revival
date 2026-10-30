@@ -20,6 +20,7 @@ import time
 
 import worlddef
 import economy
+import quest_history
 
 STORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'story.json')
 RUNNING, OFFERED = 9, 8
@@ -389,7 +390,7 @@ class Story:
             'reward': reward(q.get('reward')),
             'endConditionList': [
                 {'tid': i, 'textId': t['textKey'], 'conditionDefinitionId': t['cid'],
-                 'parameterValueList': [{'index': n, 'value': str(v)} for n, v in enumerate(t.get('params', []), 1)]}
+                 'parameterValueList': [{'index': n, 'value': str(v)} for n, v in enumerate(quest_history.native_parameters(t), 1)]}
                 for i, t in enumerate(q.get('tasks', []), 1)],
         }
         if q.get('rewardKey'):  # the text of the "Quest completed" popup (QuestManager::getPrototypeReward)
@@ -555,17 +556,19 @@ class Story:
             e['state'] = RUNNING
 
     def recover_seed_tasks(self, w, protos, finish):
-        """Recover missed seed progress from saved provenance when loading a reef.
+        """Recover missed growth progress from saved plants when loading a reef.
 
         A seed becomes a plant with a different prototypeId. Its seedPrototypeId
-        is the evidence for seed tasks; an ordinary nursery plant is not enough.
+        is the evidence for seed-specific tasks; an ordinary nursery plant is not
+        enough for those. Generic category tasks accept mature matching plants
+        from any seed, including the rare-growth and seasonal objectives.
         Use a lower bound from current entities, never increment a counter on
         each login or reduce progress for a plant the player has since sold.
         Complete through task_state so rewards and unlocks occur exactly once.
         """
         mature = (1, 6, 7)  # BUILT, PRODUCING, READY (actions imports worlddef too)
         entities = [e for name in ('corals', 'livingPlants', 'ornamentalPlants', 'rarePlants')
-                    for e in w.get(name, []) if e.get('seedPrototypeId')]
+                    for e in w.get(name, [])]
         for entry in list(w.get('quests', [])):
             if entry.get('state') != RUNNING:
                 continue
@@ -579,9 +582,10 @@ class Story:
                 if cid in ('CID_CREATED', 'CID_GROWN') and len(params) >= 2 and str(params[1]).startswith('seed_'):
                     count, seed = int(params[0]), params[1]
                     grown = cid == 'CID_GROWN'
-                elif cid == 'CID_GROW_ANY' and len(params) >= 3 and str(params[2]).startswith('seed_'):
+                elif cid == 'CID_GROW_ANY' and len(params) >= 2:
                     categories = set(str(params[0]).split(','))
-                    count, seed = int(params[1]), params[2]
+                    count = int(params[1])
+                    seed = params[2] if len(params) >= 3 else None
                     grown = True
                 else:
                     continue
@@ -590,12 +594,12 @@ class Story:
                     continue
                 matches = set()
                 for entity in entities:
-                    if entity.get('seedPrototypeId') != seed or (grown and entity.get('state') not in mature):
+                    if (seed and entity.get('seedPrototypeId') != seed) or (grown and entity.get('state') not in mature):
                         continue
                     _, p = protos.get(entity.get('prototypeId'))
                     if not p or (categories and p.get('shopCategory') not in categories):
                         continue
-                    _, seed_p = protos.get(seed)
+                    _, seed_p = protos.get(entity.get('seedPrototypeId') or entity.get('prototypeId'))
                     if grown and entity.get('growingCycle', 0) < (seed_p or {}).get('growingCycles', 1):
                         continue
                     matches.add(entity['id'])
@@ -615,6 +619,41 @@ class Story:
                 last_tid = tid
             if changed and all(s.get('finished') for s in entry['tasks']):
                 self.task_state(w, {'id': entry['id'], 'tid': last_tid, 'finished': True}, finish)
+
+    def recover_collection_tasks(self, w, protos, uid, log_path, finish):
+        """Repair zero-sized CountAny tasks once, crediting only evidenced harvests."""
+        targets, pending = {}, []
+        for entry in list(w.get('quests', [])):
+            if entry.get('state') != RUNNING or entry.get('collectionRecoveryVersion') == 1:
+                continue
+            q = self.quests.get(entry['prototypeId'], {})
+            for tid, task in enumerate(q.get('tasks', []), 1):
+                spec = quest_history.collection_spec(task)
+                saved = next((t for t in entry['tasks'] if t['tid'] == tid), None)
+                if not spec or saved is None or saved.get('finished'):
+                    continue
+                categories, count, currency = spec
+                key = (entry['id'], tid)
+                targets[key] = (entry['prototypeId'], categories, currency)
+                pending.append((entry, saved, key, count))
+        confirmed = quest_history.confirmed_harvests(log_path, uid, w, protos, targets)
+        for entry, saved, key, count in pending:
+            progress = saved.setdefault('progress', {})
+            earned = (max(0, count - max(0, int(progress.get('counter', count))))
+                      if progress.get('count') == count else 0)
+            remaining = max(0, count - max(earned, confirmed[key]))
+            progress.update(count=count, counter=remaining, state=1)
+            progress.pop('prototypeId', None)
+            if remaining == 0:
+                saved['finished'] = True
+        handled = set()
+        for entry, saved, key, count in pending:
+            if entry['id'] in handled:
+                continue
+            handled.add(entry['id'])
+            entry['collectionRecoveryVersion'] = 1
+            if all(t.get('finished') for t in entry['tasks']):
+                self.task_state(w, {'id': entry['id'], 'tid': saved['tid'], 'finished': True}, finish)
 
     def task_state(self, w, d, finish):
         """questTaskSetState: returns {"questFinished": bool}."""
@@ -681,4 +720,3 @@ class NoStory(Story):
         self.data = {'quests': [], 'dialogs': [], 'hints': [], 'patterns': []}
         self.quests = {}
         self.renamed = {}
-

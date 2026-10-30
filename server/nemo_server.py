@@ -390,6 +390,8 @@ class Game:
                     self.story.run_events(w, now_ms(), push=False)
                     self.story.recover_seed_tasks(w, self.reef.protos,
                                                  lambda q, r: self.quest_done(w, q, r))
+                    self.story.recover_collection_tasks(w, self.reef.protos, uid, self.log_path,
+                                                       lambda q, r: self.quest_done(w, q, r))
                     # quest messages are covered by the quests list; entity events still have to be pushed
                     w['messages'] = [m for m in w.get('messages', []) if m['type'] != quests.QUEST_OPEN]
                     self.push_events(w)
@@ -442,6 +444,8 @@ class Game:
                     self.push_events(w)
                     self.story.catch_up(w)  # quests that open with a level-up
                     self.story.run_events(w, now_ms())
+                    self.story.recover_seed_tasks(w, self.reef.protos,
+                                                 lambda q, r: self.quest_done(w, q, r))
                     self.expand(w)
                     self.reef.vitality(w)
                     # The client never changes currencies itself: the HUD only updates from a "status"
@@ -860,5 +864,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
