@@ -1,0 +1,4 @@
+-r requirements.txt
+glfw==2.11.0
+texture2ddecoder==1.0.6
+miniaudio==1.71

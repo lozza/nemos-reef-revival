@@ -46,6 +46,12 @@ def xor(data):
     return bytes(b ^ XOR_KEY[i & 0x7f] for i, b in enumerate(data))
 
 
+def encode_worlddef(document):
+    # XorCypher::xorFuncChar allocates exactly the received byte count, then
+    # passes the decoded buffer to a NUL-terminated String constructor.
+    return xor(json.dumps(document, separators=(',', ':')).encode('utf-8') + b'\0')
+
+
 def now_ms():
     return int(time.time() * 1000)
 
@@ -61,15 +67,11 @@ class Store:
                 uid TEXT PRIMARY KEY, udid TEXT UNIQUE, name TEXT, secret TEXT, created INTEGER);
             CREATE TABLE IF NOT EXISTS worlds (uid TEXT PRIMARY KEY, world TEXT);
             CREATE TABLE IF NOT EXISTS friends (uid TEXT, friend TEXT, PRIMARY KEY (uid, friend));
-            -- further devices linked to a player (link_device.py); a player's first device is users.udid
-            CREATE TABLE IF NOT EXISTS devices (udid TEXT PRIMARY KEY, uid TEXT);
         ''')
 
     def user_by_udid(self, udid):
         with self.lock:
-            r = self.db.execute('SELECT users.uid, name, secret FROM devices JOIN users ON users.uid = devices.uid '
-                                'WHERE devices.udid=?', (udid,)).fetchone() or \
-                self.db.execute('SELECT uid, name, secret FROM users WHERE udid=?', (udid,)).fetchone()
+            r = self.db.execute('SELECT uid, name, secret FROM users WHERE udid=?', (udid,)).fetchone()
         return r and {'uid': r[0], 'name': r[1], 'secret': r[2]}
 
     def user(self, uid):
@@ -218,7 +220,6 @@ class Game:
                 self.store.db.execute('DELETE FROM worlds')
                 self.store.db.execute('DELETE FROM users')
                 self.store.db.execute('DELETE FROM friends')
-                self.store.db.execute('DELETE FROM devices')
             print('everything reset: every device is a new player again (asked for a name)')
         if args.reset_worlds:
             with self.store.lock, self.store.db:
@@ -317,7 +318,7 @@ class Game:
             wd['localizedTextsBundleId'] = self.bundle_id
             worlddef.finish(wd)  # new version stamp, so clients fetch the definition with the new id
             self.world_versions[kids] = str(wd['version'])
-            self.worlddef_blobs[str(wd['version'])] = xor(json.dumps(wd, separators=(',', ':')).encode('utf-8'))
+            self.worlddef_blobs[str(wd['version'])] = encode_worlddef(wd)
         self.world_version = self.world_versions[False]
 
     def player_world_version(self, w, exchange_client=False):
@@ -334,7 +335,7 @@ class Game:
                 wd['exchangePackagePrototypes'] = economy.packages(level) if exchange_client else []
                 worlddef.finish(wd)
                 version = str(wd['version'])
-                self.worlddef_blobs[version] = xor(json.dumps(wd, separators=(',', ':')).encode('utf-8'))
+                self.worlddef_blobs[version] = encode_worlddef(wd)
                 self.player_world_versions[key] = version
             return self.player_world_versions[key]
 
@@ -813,6 +814,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             tap = self.game.tap(endpoint, p)
             if tap is not None:
+                # The original TapAction parser only assigns its status member
+                # when this envelope exists. Registration accepts code 1.
+                tap.setdefault('status', {'code': 1, 'reason': 'Success'})
                 out, ctype = json.dumps(tap).encode('utf-8'), 'application/json'
             else:
                 out, ctype = self.game.game(endpoint, p)
