@@ -7,6 +7,7 @@ def verify():
     import economy
     import quests
     import quest_history
+    import worlddef
     from gameplay_compatibility import FISH_VISIBILITY
     import camera_zoom
 
@@ -17,6 +18,7 @@ def verify():
     assert callable(story.recover_collection_tasks)
     assert callable(story.recover_seed_tasks)
     assert 'ET_RARE_PLANT' not in actions.HARVESTABLE
+    assert 'ET_PATCH' not in worlddef.PRODUCES
     p = {'id':'coral_check','growingCycles':3,'growingCycleCost':{'energy':30},
          'growingTime':{'duration':1000,'timeWarp':0},'producedReward':{'energy':10,'xp':6},
          'producingTime':{'duration':28800000,'timeWarp':7}}
@@ -35,4 +37,4 @@ def verify():
     assert camera_zoom.zoom(None,0) is False
     return {'quest_counters':'passed','historical_collection_recovery':'included',
             'rare_growth':'passed','production_time_metadata':'passed','daily_rewards':'passed',
-            'fish_visibility':'included','mouse_wheel_zoom':'included'}
+            'fish_visibility':'included','mouse_wheel_zoom':'included','empty_patch_shop_labels':'passed'}
