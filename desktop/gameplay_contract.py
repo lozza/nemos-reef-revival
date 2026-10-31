@@ -12,6 +12,11 @@ def verify():
     import camera_zoom
 
     story = quests.Story(economy_mode='revival')
+    for fid in ('fish_rare_vampire', 'fish_rare_vampire_green',
+                'fish_rare_vampire_red', 'fish_rare_vampire_orange'):
+        crab = story.data['items'][fid]
+        assert crab['fishFeed'] == 100 and crab['every'] == 86400
+        assert crab['produce'] == {'hardMoney': 1} and crab['hearts'] == 500
     for qid, amount in (('side_quest_03', 300), ('side_quest_us_06', 50)):
         task = story.quest_prototype(story.quests[qid])['endConditionList'][0]
         assert task['parameterValueList'][0] == {'index':1,'value':str(amount)}
@@ -37,4 +42,5 @@ def verify():
     assert camera_zoom.zoom(None,0) is False
     return {'quest_counters':'passed','historical_collection_recovery':'included',
             'rare_growth':'passed','production_time_metadata':'passed','daily_rewards':'passed',
-            'fish_visibility':'included','mouse_wheel_zoom':'included','empty_patch_shop_labels':'passed'}
+            'fish_visibility':'included','mouse_wheel_zoom':'included','empty_patch_shop_labels':'passed',
+            'crab_pearl_rewards':'passed'}

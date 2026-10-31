@@ -36,6 +36,16 @@ def configure_story(data, profile):
     if profile != 'revival':
         return
     items = data.get('items', {})
+    # These colour-only entries lack the rare-fish economy recovered for other
+    # species. Replace their generic coin/XP placeholders in Revival mode.
+    # This is a Revival balance choice, not a recovered original-game value.
+    for fid in ('fish_rare_vampire', 'fish_rare_vampire_green',
+                'fish_rare_vampire_red', 'fish_rare_vampire_orange'):
+        it = items.setdefault(fid, {})
+        it.setdefault('fishFeed', 100)
+        it.setdefault('every', 86400)
+        it.setdefault('produce', {'hardMoney': 1})
+        it.setdefault('hearts', 500)
     rare = sorted({pid for pid in items if pid.startswith('rare_plant_')}
                   | {pid for sid in SEEDS for pid in items.get(sid, {}).get('results', [])
                      if pid.startswith('rare_plant_')})
