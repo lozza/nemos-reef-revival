@@ -41,7 +41,9 @@ SHOP_CATEGORY = {
     'ET_PATCH': 'SPECIAL',  # the empty Patch
 }
 
-PRODUCES = ('ET_CORAL', 'ET_LIVING_PLANT', 'ET_PATCH', 'ET_CHARACTER')
+# Empty patches have their own shop labels. Their filled production is taken
+# from the contained plant's upgradePrototypeId, not the patch prototype.
+PRODUCES = ('ET_CORAL', 'ET_LIVING_PLANT', 'ET_CHARACTER')
 GROWS = ('ET_CORAL', 'ET_LIVING_PLANT', 'ET_ORN_PLANT', 'ET_RARE_PLANT', 'ET_SEED')
 
 # Tutorial/server-only prototype ids referenced by the client code.
@@ -305,3 +307,4 @@ def finish(wd):
 if __name__ == '__main__':
     import sys
     json.dump(build(sys.argv[1]), sys.stdout, indent=1)
+
